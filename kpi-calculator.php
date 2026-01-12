@@ -2,12 +2,12 @@
 /**
  * Plugin Name: KPI Calculator
  * Description: Daily KPI entry + Monthly/YTD KPI dashboard (Activity + Monthly figures).
- * Version: 1.0.0
+ * Version: 1.0.1
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('KPI_CALC_VERSION', '1.0.0');
+define('KPI_CALC_VERSION', '1.0.1');
 define('KPI_CALC_PATH', plugin_dir_path(__FILE__));
 define('KPI_CALC_URL', plugin_dir_url(__FILE__));
 

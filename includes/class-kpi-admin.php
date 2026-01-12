@@ -92,7 +92,7 @@ class KPI_Admin {
 
     ?>
     <div class="wrap kpi-calc-wrap">
-      <h1>KPI Calculator test</h1>
+      <h1>KPI Calculator</h1>
 
       <?php if (!empty($_GET['saved']) && $_GET['saved'] === '1'): ?>
         <div class="notice notice-success is-dismissible"><p>Saved.</p></div>
