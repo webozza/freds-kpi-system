@@ -1,0 +1,324 @@
+:root {
+  --kpi-bg1: #0b1220;
+  --kpi-bg2: #111b31;
+
+  --kpi-text: rgba(255, 255, 255, 0.92);
+  --kpi-muted: rgba(255, 255, 255, 0.7);
+
+  --kpi-border: rgba(255, 255, 255, 0.14);
+
+  --kpi-accent: #66f0c2;
+  --kpi-accent2: #8aa6ff;
+
+  /* SOLID darks for Handsontable */
+  --hot-base: #0b1220;
+  --hot-head: #141f38;
+  --hot-cell: #0f1a31;
+  --hot-cell-hover: #152244;
+  --hot-border: rgba(255, 255, 255, 0.12);
+}
+
+.kpi-wrap {
+  padding: 24px 12px;
+  color: var(--kpi-text);
+}
+
+.kpi-shell {
+  margin: 0 auto;
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      1200px 500px at 15% 0%,
+      rgba(102, 240, 194, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 85% 20%,
+      rgba(138, 166, 255, 0.2),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--kpi-bg1), var(--kpi-bg2));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.35);
+}
+
+.kpi-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.kpi-title h2 {
+  margin: 8px 0 4px;
+  font-size: 28px;
+  letter-spacing: 0.2px;
+}
+
+.kpi-subtitle {
+  margin: 0;
+  color: var(--kpi-muted);
+}
+
+.kpi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 240, 194, 0.26),
+    rgba(138, 166, 255, 0.26)
+  );
+  color: var(--kpi-text);
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.kpi-card {
+  border: 1px solid var(--kpi-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
+}
+
+.kpi-hot-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+/* =========================================================
+   HANDSONTABLE: FORCE SOLID DARK EVERYWHERE (MASTER + CLONES)
+========================================================= */
+
+/* Outer container */
+#kpiHotActivity.kpi-hot,
+#kpiHotSales.kpi-hot {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--hot-base) !important;
+}
+
+#kpiHotActivity.kpi-hot.handsontable,
+#kpiHotActivity.kpi-hot .handsontable,
+#kpiHotActivity.kpi-hot .ht_master,
+#kpiHotActivity.kpi-hot .ht_clone_top,
+#kpiHotActivity.kpi-hot .ht_clone_left,
+#kpiHotActivity.kpi-hot .ht_clone_top_left_corner,
+#kpiHotActivity.kpi-hot .ht_clone_bottom,
+#kpiHotActivity.kpi-hot .ht_clone_bottom_left_corner,
+#kpiHotActivity.kpi-hot .wtHolder,
+#kpiHotActivity.kpi-hot .wtHider,
+#kpiHotActivity.kpi-hot .wtSpreader,
+#kpiHotActivity.kpi-hot table,
+#kpiHotActivity.kpi-hot table.htCore,
+#kpiHotSales.kpi-hot.handsontable,
+#kpiHotSales.kpi-hot .handsontable,
+#kpiHotSales.kpi-hot .ht_master,
+#kpiHotSales.kpi-hot .ht_clone_top,
+#kpiHotSales.kpi-hot .ht_clone_left,
+#kpiHotSales.kpi-hot .ht_clone_top_left_corner,
+#kpiHotSales.kpi-hot .ht_clone_bottom,
+#kpiHotSales.kpi-hot .ht_clone_bottom_left_corner,
+#kpiHotSales.kpi-hot .wtHolder,
+#kpiHotSales.kpi-hot .wtHider,
+#kpiHotSales.kpi-hot .wtSpreader,
+#kpiHotSales.kpi-hot table,
+#kpiHotSales.kpi-hot table.htCore {
+  background-color: var(--hot-base) !important;
+  background: var(--hot-base) !important;
+}
+
+/* Borders */
+#kpiHotActivity.kpi-hot .htCore td,
+#kpiHotActivity.kpi-hot .htCore th,
+#kpiHotSales.kpi-hot .htCore td,
+#kpiHotSales.kpi-hot .htCore th {
+  border-color: var(--hot-border) !important;
+}
+
+/* Headers (top header + row header) */
+#kpiHotActivity.kpi-hot .htCore thead th,
+#kpiHotActivity.kpi-hot .htCore tbody th,
+#kpiHotSales.kpi-hot .htCore thead th,
+#kpiHotSales.kpi-hot .htCore tbody th {
+  background-color: var(--hot-head) !important;
+  color: var(--kpi-text) !important;
+  font-weight: 900 !important;
+}
+
+/* Body cells */
+#kpiHotActivity.kpi-hot .htCore td,
+#kpiHotSales.kpi-hot .htCore td {
+  background-color: var(--hot-cell) !important;
+  color: var(--kpi-text) !important;
+}
+
+/* Make dimmed readable */
+#kpiHotActivity.kpi-hot td.htDimmed,
+#kpiHotActivity.kpi-hot th.htDimmed,
+#kpiHotSales.kpi-hot td.htDimmed,
+#kpiHotSales.kpi-hot th.htDimmed {
+  color: var(--kpi-text) !important;
+  opacity: 0.95 !important;
+}
+
+/* Hover */
+#kpiHotActivity.kpi-hot .htCore tbody tr:hover td,
+#kpiHotSales.kpi-hot .htCore tbody tr:hover td {
+  background-color: var(--hot-cell-hover) !important;
+}
+
+/* Selection background */
+#kpiHotActivity.kpi-hot .current,
+#kpiHotActivity.kpi-hot .area,
+#kpiHotActivity.kpi-hot .highlight,
+#kpiHotSales.kpi-hot .current,
+#kpiHotSales.kpi-hot .area,
+#kpiHotSales.kpi-hot .highlight {
+  background: rgba(102, 240, 194, 0.18) !important;
+}
+
+/* Metric column (your custom classes) */
+#kpiHotActivity.kpi-hot .kpi-hot-metric,
+#kpiHotSales.kpi-hot .kpi-hot-metric {
+  background-color: #16213a !important;
+  font-weight: 900 !important;
+}
+
+#kpiHotActivity.kpi-hot .kpi-hot-metric--leads,
+#kpiHotSales.kpi-hot .kpi-hot-metric--leads {
+  background-color: rgba(102, 240, 194, 0.16) !important;
+}
+
+#kpiHotActivity.kpi-hot .kpi-hot-metric--pipe,
+#kpiHotSales.kpi-hot .kpi-hot-metric--pipe {
+  background-color: rgba(138, 166, 255, 0.16) !important;
+}
+
+/* Column header dropdown button visibility */
+#kpiHotActivity.kpi-hot button.changeType,
+#kpiHotSales.kpi-hot button.changeType {
+  opacity: 0.9 !important;
+  filter: invert(1) grayscale(1) !important;
+}
+
+/* Editor textarea */
+#kpiHotActivity.kpi-hot textarea.handsontableInput,
+#kpiHotSales.kpi-hot textarea.handsontableInput {
+  background: #0b1220 !important;
+  color: var(--kpi-text) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 10px !important;
+}
+
+/* Optional: widen container on that page */
+.page-id-1736 #main-content .container {
+  max-width: 100%;
+}
+
+/* =========================
+   KPI layout fixes (cards + rows)
+   Paste at very bottom
+========================= */
+
+/* Cards grid (Totals / Key Stats / Spreadsheet) */
+.kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+@media (max-width: 980px) {
+  .kpi-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card titles spacing */
+.kpi-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+.kpi-card p {
+  margin: 6px 0;
+  color: var(--kpi-muted);
+}
+
+/* KPI key/value rows (the thing your screenshot is missing) */
+.kpi-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.16);
+}
+.kpi-kv:last-child {
+  border-bottom: none;
+}
+
+.kpi-kv span {
+  color: var(--kpi-muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+.kpi-kv strong {
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+/* Small helpers */
+.kpi-muted {
+  color: var(--kpi-muted);
+}
+
+/* Month picker + tabs alignment (top right) */
+.kpi-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.kpi-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.kpi-tab {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--kpi-text);
+  font-weight: 900;
+  font-size: 12px;
+  text-decoration: none;
+}
+.kpi-tab.is-active {
+  background: linear-gradient(
+    135deg,
+    rgba(102, 240, 194, 0.2),
+    rgba(138, 166, 255, 0.18)
+  );
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.kpi-hot {
+  margin-top: 10px;
+}
