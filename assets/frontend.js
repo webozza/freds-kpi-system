@@ -41,63 +41,52 @@
     }
   }
 
-  function buildUrlWithYm(ym) {
-    var u = new URL(window.location.href);
-    u.searchParams.set("kpi_ym", ym);
-    if (!u.searchParams.get("kpi_tab"))
-      u.searchParams.set("kpi_tab", "activity");
-    window.location.href = u.toString();
-  }
-
-  // ---------- flatpickr month picker ----------
-  function initMonthPicker() {
-    var el = document.getElementById("kpiMonthPicker");
-    if (!el || !window.flatpickr) return;
-
-    var currentYm =
-      el.value && /^\d{4}-\d{2}$/.test(el.value)
-        ? el.value
-        : kpiFront?.todayYm ?? "";
-    var defaultDate = currentYm ? currentYm + "-01" : null;
-
-    flatpickr(el, {
-      dateFormat: "Y-m",
-      altInput: true,
-      altFormat: "F Y",
-      defaultDate: defaultDate,
-      onChange: function (_selectedDates, dateStr) {
-        if (dateStr && /^\d{4}-\d{2}$/.test(dateStr)) buildUrlWithYm(dateStr);
-      },
-    });
-  }
+  // Store references to both HOT instances for recalc
+  var hotLeads = null;
+  var hotSales = null;
+  var leadsRows = [];
+  var salesRows = [];
+  var activityMeta = {};
 
   // ---------- KPI card recalcs ----------
-  function recalcCardsFromHot(hot, rows, daysInMonth, leadKeys) {
-    function rowKeyToIndex(key) {
-      for (var i = 0; i < rows.length; i++) if (rows[i].key === key) return i;
-      return -1;
+  function recalcAllCards() {
+    var daysInMonth = activityMeta.daysInMonth || 30;
+    var leadKeys = activityMeta.selectedLeadKeys || [];
+
+    function sumFromHot(hot, rows, key) {
+      if (!hot) return 0;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].key === key) {
+          var sum = 0;
+          for (var d = 1; d <= daysInMonth; d++) {
+            sum += toNum(hot.getDataAtCell(i, d));
+          }
+          return sum;
+        }
+      }
+      return 0;
     }
 
-    function sumRowByKey(key) {
-      var idx = rowKeyToIndex(key);
-      if (idx < 0) return 0;
-      var sum = 0;
-      for (var d = 1; d <= daysInMonth; d++)
-        sum += toNum(hot.getDataAtCell(idx, d));
-      return sum;
-    }
-
+    // Sum leads from leads table
     var leads = 0;
-    (leadKeys || []).forEach(function (k) {
-      leads += sumRowByKey(k);
+    leadKeys.forEach(function (k) {
+      leads += sumFromHot(hotLeads, leadsRows, k);
     });
 
-    var calls = sumRowByKey("calls");
-    var apps = sumRowByKey("appointments");
-    var quotes = sumRowByKey("quotes");
-    var quoteVal = sumRowByKey("quote_value");
-    var sales = sumRowByKey("sales");
-    var salesVal = sumRowByKey("sales_value");
+    // Update individual lead totals
+    leadKeys.forEach(function (k) {
+      var val = sumFromHot(hotLeads, leadsRows, k);
+      var el = document.querySelector('.kpi-lead-total[data-key="' + k + '"]');
+      if (el) el.textContent = fmtInt(val);
+    });
+
+    // Sum sales data from sales table
+    var calls = sumFromHot(hotSales, salesRows, "calls");
+    var apps = sumFromHot(hotSales, salesRows, "appointments");
+    var quotes = sumFromHot(hotSales, salesRows, "quotes");
+    var quoteVal = sumFromHot(hotSales, salesRows, "quote_value");
+    var sales = sumFromHot(hotSales, salesRows, "sales");
+    var salesVal = sumFromHot(hotSales, salesRows, "sales_value");
 
     var avgQuote = quotes > 0 ? quoteVal / quotes : 0;
     var avgSale = sales > 0 ? salesVal / sales : 0;
@@ -135,21 +124,19 @@
     setText("kpi_sales_from_leads", fmtPct(salesFromLeads));
   }
 
-  // ---------- Handsontable: Activity ----------
-  function initHotActivity() {
-    var container = document.getElementById("kpiHotActivity");
-    if (!container || !window.Handsontable) return;
+  // ---------- Create a Handsontable for Activity ----------
+  function createActivityTable(containerId, rows, prefill, daysInMonth, isLeadsTable) {
+    var container = document.getElementById(containerId);
+    if (!container || !window.Handsontable) return null;
 
-    var rows = readJson("kpi_activity_rows") || [];
-    var prefill = readJson("kpi_activity_prefill") || [];
-    var meta = readJson("kpi_activity_meta") || {};
-    var daysInMonth = meta.daysInMonth || 30;
-    var totalCol = daysInMonth + 1; // col index of Total (0=Metric, 1..days, total=days+1)
+    var totalCol = daysInMonth + 1;
+    var hasTotalRow = true;
+    var totalRowIndex = hasTotalRow ? rows.length : -1;
 
     // build columns
     var colHeaders = ["Metric"];
     for (var d = 1; d <= daysInMonth; d++) colHeaders.push(String(d));
-    colHeaders.push("Total");
+    colHeaders.push("TOTAL");
 
     // data rows: [Label, ...days..., Total]
     var data = rows.map(function (r, i) {
@@ -165,22 +152,43 @@
 
       return [r.label].concat(dayVals).concat([total]);
     });
+    if (hasTotalRow) {
+      var totalRow = [isLeadsTable ? "Total Leads" : "Total Sales"];
+      var grandTotal = 0;
+      for (var d = 1; d <= daysInMonth; d++) {
+        var daySum = 0;
+        for (var r = 0; r < rows.length; r++) {
+          daySum += toNum(data[r][d]);
+        }
+        grandTotal += daySum;
+        totalRow.push(fmtInt(daySum));
+      }
+      totalRow.push(fmtInt(grandTotal));
+      data.push(totalRow);
+    }
 
     function firstColRenderer(instance, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
       td.style.fontWeight = "800";
       td.style.whiteSpace = "nowrap";
       td.classList.add("kpi-hot-metric");
-
-      var group = rows[row]?.group || "";
-      if (group === "Leads") td.classList.add("kpi-hot-metric--leads");
-      if (group === "Pipeline") td.classList.add("kpi-hot-metric--pipe");
+      if (isLeadsTable) {
+        td.classList.add("kpi-hot-metric--leads");
+      } else {
+        td.classList.add("kpi-hot-metric--pipe");
+      }
     }
 
     function totalRenderer(instance, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
       td.style.fontWeight = "900";
       td.classList.add("kpi-hot-total");
+    }
+
+    function totalRowRenderer(instance, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      td.style.fontWeight = "900";
+      td.classList.add("kpi-hot-total-row");
     }
 
     function numRenderer(instance, td, row, col, prop, value) {
@@ -199,24 +207,28 @@
     var hot = new Handsontable(container, {
       data: data,
       colHeaders: colHeaders,
-      rowHeaders: true,
+      rowHeaderWidth: 0,
       height: "auto",
       licenseKey: "non-commercial-and-evaluation",
-      fixedColumnsStart: 1,
       manualColumnResize: true,
       manualRowResize: true,
       stretchH: "none",
       contextMenu: true,
-      dropdownMenu: true,
-      filters: true,
       outsideClickDeselects: false,
       columnSorting: false,
       minSpareRows: 0,
+      rowHeaders: false,
+
       cells: function (row, col) {
         var cp = {};
         var isLabelCol = col === 0;
         var isTotalCol = col === totalCol;
 
+        if (hasTotalRow && row === totalRowIndex) {
+          cp.readOnly = true;
+          cp.renderer = totalRowRenderer;
+          return cp;
+        }
         if (isLabelCol) {
           cp.readOnly = true;
           cp.renderer = firstColRenderer;
@@ -235,10 +247,8 @@
       },
 
       afterChange: function (changes, source) {
-        // ✅ CRITICAL: ignore our own total writes
         if (!changes || source === "loadData" || source === "calc") return;
 
-        // collect only rows that were edited in day columns
         var touched = new Set();
         changes.forEach(function (c) {
           var row = c[0];
@@ -246,30 +256,77 @@
           if (col >= 1 && col <= daysInMonth) touched.add(row);
         });
 
-        // batch updates to avoid cascading events
         hot.batch(function () {
           touched.forEach(function (r) {
             hot.setDataAtCell(r, totalCol, recalcRowTotal(hot, r), "calc");
           });
+          if (hasTotalRow) {
+            var grand = 0;
+            for (var d = 1; d <= daysInMonth; d++) {
+              var daySum = 0;
+              for (var r = 0; r < rows.length; r++) {
+                daySum += toNum(hot.getDataAtCell(r, d));
+              }
+              grand += daySum;
+              hot.setDataAtCell(totalRowIndex, d, fmtInt(daySum), "calc");
+            }
+            hot.setDataAtCell(totalRowIndex, totalCol, fmtInt(grand), "calc");
+          }
         });
 
-        recalcCardsFromHot(hot, rows, daysInMonth, meta.selectedLeadKeys || []);
+        recalcAllCards();
       },
     });
 
-    // initial totals + cards (batch to avoid any weirdness)
+    // initial totals
     hot.batch(function () {
       for (var i = 0; i < rows.length; i++) {
         hot.setDataAtCell(i, totalCol, recalcRowTotal(hot, i), "calc");
       }
+      if (hasTotalRow) {
+        var grand = 0;
+        for (var d = 1; d <= daysInMonth; d++) {
+          var daySum = 0;
+          for (var r = 0; r < rows.length; r++) {
+            daySum += toNum(hot.getDataAtCell(r, d));
+          }
+          grand += daySum;
+          hot.setDataAtCell(totalRowIndex, d, fmtInt(daySum), "calc");
+        }
+        hot.setDataAtCell(totalRowIndex, totalCol, fmtInt(grand), "calc");
+      }
     });
-    recalcCardsFromHot(hot, rows, daysInMonth, meta.selectedLeadKeys || []);
 
-    // submit -> build payload JSON from grid
+    return hot;
+  }
+
+  // ---------- Handsontable: Activity (Two Tables) ----------
+  function initHotActivity() {
+    leadsRows = readJson("kpi_leads_rows") || [];
+    var leadsPrefill = readJson("kpi_leads_prefill") || [];
+    salesRows = readJson("kpi_sales_rows") || [];
+    var salesPrefill = readJson("kpi_sales_prefill") || [];
+    activityMeta = readJson("kpi_activity_meta") || {};
+    var daysInMonth = activityMeta.daysInMonth || 30;
+
+    // Initialize Leads table
+    if (document.getElementById("kpiHotLeads")) {
+      hotLeads = createActivityTable("kpiHotLeads", leadsRows, leadsPrefill, daysInMonth, true);
+    }
+
+    // Initialize Sales table
+    if (document.getElementById("kpiHotSales")) {
+      hotSales = createActivityTable("kpiHotSales", salesRows, salesPrefill, daysInMonth, false);
+    }
+
+    // Initial card recalc
+    recalcAllCards();
+
+    // Form submit handler
     var form = document.getElementById("kpiActivityForm");
     if (form) {
       form.addEventListener("submit", function () {
-        var ym = meta.ym || (kpiFront?.todayYm ?? "");
+        var ym = activityMeta.ym || (kpiFront?.todayYm ?? "");
         var y = parseInt(ym.slice(0, 4), 10);
         var m = parseInt(ym.slice(5, 7), 10);
 
@@ -282,11 +339,23 @@
 
           payload.kpi[date] = {};
 
-          rows.forEach(function (r, i) {
-            var v = toNum(hot.getDataAtCell(i, d));
-            payload.kpi[date][r.key] =
-              r.type === "money" ? Math.round(v * 100) / 100 : Math.round(v);
-          });
+          // Get data from Leads table
+          if (hotLeads) {
+            leadsRows.forEach(function (r, i) {
+              var v = toNum(hotLeads.getDataAtCell(i, d));
+              payload.kpi[date][r.key] =
+                r.type === "money" ? Math.round(v * 100) / 100 : Math.round(v);
+            });
+          }
+
+          // Get data from Sales table
+          if (hotSales) {
+            salesRows.forEach(function (r, i) {
+              var v = toNum(hotSales.getDataAtCell(i, d));
+              payload.kpi[date][r.key] =
+                r.type === "money" ? Math.round(v * 100) / 100 : Math.round(v);
+            });
+          }
         }
 
         var hidden = document.getElementById("kpi_payload");
@@ -301,54 +370,80 @@
     if (!container || !window.Handsontable) return;
 
     var grid = readJson("kpi_monthly_grid") || [];
+    var meta = readJson("kpi_monthly_meta") || {};
     if (!grid.length) return;
+
+    var yearShort = meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
 
     var data = grid.map(function (r) {
       return r.slice(0, r.length - 1);
     });
-    var emphasis = grid.map(function (r) {
-      return r[r.length - 1] === "__emphasis__";
+
+    var rowTypes = grid.map(function (r) {
+      var flag = r[r.length - 1] || '';
+      if (flag === '__section__') return 'section';
+      if (flag === '__empty__') return 'empty';
+      if (flag === 'total') return 'total';
+      return '';
     });
 
-    var colHeaders = [
-      "Metric",
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-      "YTD",
-      "Avg",
-    ];
+    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var colHeaders = ["Metric"];
+    for (var i = 0; i < 12; i++) {
+      colHeaders.push(monthNames[i] + "-" + yearShort);
+    }
+    colHeaders.push("Year to Date");
+    colHeaders.push("Averages");
 
-    function metricRenderer(instance, td, row) {
+    function metricRenderer(instance, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      td.style.fontWeight = emphasis[row] ? "900" : "800";
-      td.classList.add("kpi-hot-metric");
-      if (emphasis[row]) td.classList.add("kpi-hot-metric--emph");
+      var type = rowTypes[row];
+
+      if (type === 'section') {
+        td.style.fontWeight = "900";
+        td.style.fontSize = "13px";
+        td.classList.add("kpi-hot-section");
+      } else if (type === 'total') {
+        td.style.fontWeight = "900";
+        td.classList.add("kpi-hot-metric", "kpi-hot-metric--total");
+      } else if (type === 'empty') {
+        td.classList.add("kpi-hot-empty");
+      } else {
+        td.style.fontWeight = "700";
+        td.classList.add("kpi-hot-metric");
+      }
     }
 
-    function cellRenderer(instance, td, row) {
+    function cellRenderer(instance, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      td.classList.add("kpi-hot-num");
-      if (emphasis[row]) td.style.fontWeight = "800";
+      var type = rowTypes[row];
+
+      if (type === 'section') {
+        td.classList.add("kpi-hot-section");
+      } else if (type === 'total') {
+        td.style.fontWeight = "800";
+        td.classList.add("kpi-hot-num", "kpi-hot-num--total");
+      } else if (type === 'empty') {
+        td.classList.add("kpi-hot-empty");
+      } else {
+        td.classList.add("kpi-hot-num");
+      }
+
+      if (col === 13 || col === 14) {
+        td.classList.add("kpi-hot-summary");
+        if (type === 'total') {
+          td.style.fontWeight = "900";
+        }
+      }
     }
 
     new Handsontable(container, {
       data: data,
       colHeaders: colHeaders,
-      rowHeaders: true,
-      height: "auto",
+      rowHeaders: false,
+      height: "60vh",
       readOnly: true,
       licenseKey: "non-commercial-and-evaluation",
-      fixedColumnsStart: 1,
       manualColumnResize: true,
       stretchH: "none",
       cells: function (row, col) {
@@ -359,10 +454,76 @@
     });
   }
 
+  // ---------- Settings Drawer ----------
+  function initSettingsDrawer() {
+    var toggleBtn = document.getElementById("kpiSettingsToggle");
+    var drawer = document.getElementById("kpiSettingsDrawer");
+    var closeBtn = document.getElementById("kpiSettingsClose");
+    var overlay = document.getElementById("kpiSettingsOverlay");
+
+    if (!toggleBtn || !drawer) return;
+
+    function openDrawer() {
+      drawer.classList.add("is-open");
+      if (overlay) overlay.classList.add("is-visible");
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove("is-open");
+      if (overlay) overlay.classList.remove("is-visible");
+    }
+
+    toggleBtn.addEventListener("click", openDrawer);
+    if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+    if (overlay) overlay.addEventListener("click", closeDrawer);
+
+    // Close on escape key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && drawer.classList.contains("is-open")) {
+        closeDrawer();
+      }
+    });
+  }
+
+  // ---------- Setup form: live update "Other" checkbox labels ----------
+  function initSetupOtherLabelSync() {
+    var $in1 = $('input[name="labels[leads_other_1]"]');
+    var $in2 = $('input[name="labels[leads_other_2]"]');
+
+    if (!$in1.length && !$in2.length) return;
+
+    function safeLabel(v) {
+      v = (v || "").trim();
+      return v ? v : "Other";
+    }
+
+    function setCheckboxText(leadKey, txt) {
+      var $cb = $('input[name="channels[]"][value="' + leadKey + '"]');
+      if (!$cb.length) return;
+      $cb.closest(".kpi-check").find("span").text(txt);
+    }
+
+    function syncAll() {
+      if ($in1.length) setCheckboxText("leads_other_1", safeLabel($in1.val()));
+      if ($in2.length) setCheckboxText("leads_other_2", safeLabel($in2.val()));
+    }
+
+    syncAll();
+
+    $in1.on("input", function () {
+      setCheckboxText("leads_other_1", safeLabel(this.value));
+    });
+
+    $in2.on("input", function () {
+      setCheckboxText("leads_other_2", safeLabel(this.value));
+    });
+  }
+
   // ---------- init ----------
   $(function () {
-    initMonthPicker();
     initHotActivity();
     initHotMonthly();
+    initSettingsDrawer();
+    initSetupOtherLabelSync();
   });
 })(jQuery);
