@@ -2,12 +2,12 @@
 /**
  * Plugin Name: KPI Calculator
  * Description: KPI Tracker (Frontend only) - Activity + Monthly Figures (per user)
- * Version: 1.3.0
+ * Version: 1.4.0
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('KPI_CALC_VERSION', '1.3.0');
+define('KPI_CALC_VERSION', '1.4.0');
 define('KPI_CALC_PATH', plugin_dir_path(__FILE__));
 define('KPI_CALC_URL', plugin_dir_url(__FILE__));
 
