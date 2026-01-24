@@ -442,7 +442,7 @@ class KPI_Frontend {
                   <select id="kpiYearSelectActivity" onchange="updateActivityUrl()">
                     <?php
                     $currentYear = (int)date('Y');
-                    for ($y = $currentYear; $y >= $currentYear - 5; $y--): ?>
+                    for ($y = $currentYear; $y >= $currentYear - 10; $y--): ?>
                       <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
                     <?php endfor; ?>
                   </select>
@@ -479,7 +479,7 @@ class KPI_Frontend {
                 <select id="kpiYearSelectMonthly" onchange="window.location.href='?kpi_tab=monthly&kpi_year='+this.value">
                   <?php
                   $currentYear = (int)date('Y');
-                  for ($y = $currentYear; $y >= $currentYear - 5; $y--): ?>
+                  for ($y = $currentYear; $y >= $currentYear - 10; $y--): ?>
                     <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
                   <?php endfor; ?>
                 </select>
