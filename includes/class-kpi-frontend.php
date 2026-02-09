@@ -26,8 +26,19 @@ class KPI_Frontend {
     if (!has_shortcode($post->post_content, 'kpi_dashboard')) return;
 
     // --- Vendor: Handsontable (CDN) ---
-    wp_enqueue_style('kpi-handsontable', 'https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.css', [], '14.5.0');
-    wp_enqueue_script('kpi-handsontable', 'https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.js', [], '14.5.0', true);
+    wp_enqueue_style(
+      'kpi-handsontable',
+      'https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.css',
+      [],
+      '14.5.0'
+    );
+    wp_enqueue_script(
+      'kpi-handsontable',
+      'https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.js',
+      [],
+      '14.5.0',
+      true
+    );
 
     // --- Our UI ---
     wp_enqueue_style('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.css', [], KPI_CALC_VERSION);
@@ -66,31 +77,10 @@ class KPI_Frontend {
   }
 
   // -----------------------
-  // Setup (channels)
+  // Setup (unlimited channels)
   // -----------------------
-  private static function default_channels() {
-    return [
-      'leads_website' => 'Website',
-      'leads_google_ads' => 'Google Ads',
-      'leads_houzz' => 'Houzz',
-      'leads_facebook' => 'Facebook',
-      'leads_referrals' => 'Referrals',
-      'leads_repeat_customers' => 'Repeat customers',
-      'leads_instagram' => 'Instagram',
-      'leads_walkins' => 'Walk-ins',
-      'leads_other_1' => 'Other',
-      'leads_other_2' => 'Other',
-    ];
-  }
-
-  private static function get_setup($user_id) {
-    $channels = get_user_meta($user_id, 'kpi_channels', true);
-    $labels = get_user_meta($user_id, 'kpi_channel_labels', true);
-
-    return [
-      'channels' => is_array($channels) ? $channels : [],
-      'labels'   => is_array($labels) ? $labels : [],
-    ];
+  private static function setup_done($user_id) {
+    return (bool) get_user_meta((int)$user_id, 'kpi_setup_done', true);
   }
 
   public static function handle_save_user_setup() {
@@ -101,28 +91,41 @@ class KPI_Frontend {
 
     $user_id = get_current_user_id();
 
-    $channels = isset($_POST['channels']) && is_array($_POST['channels']) ? array_map('sanitize_text_field', $_POST['channels']) : [];
-    $channels = array_values(array_unique(array_filter($channels)));
+    // Expect JSON payload from JS (channel editor)
+    $raw = isset($_POST['kpi_channels_json']) ? wp_unslash($_POST['kpi_channels_json']) : '[]';
+    $rows = json_decode($raw, true);
+    if (!is_array($rows)) $rows = [];
 
-    // allow only known keys
-    $allowed = array_keys(self::default_channels());
-    $channels = array_values(array_intersect($channels, $allowed));
+    KPI_DB::save_channels($user_id, $rows);
 
-    $labels_in = isset($_POST['labels']) && is_array($_POST['labels']) ? $_POST['labels'] : [];
-    $labels = [
-      'leads_other_1' => isset($labels_in['leads_other_1']) ? sanitize_text_field($labels_in['leads_other_1']) : 'Other',
-      'leads_other_2' => isset($labels_in['leads_other_2']) ? sanitize_text_field($labels_in['leads_other_2']) : 'Other',
-    ];
-
-    update_user_meta($user_id, 'kpi_channels', $channels);
-    update_user_meta($user_id, 'kpi_channel_labels', $labels);
+    // mark setup done
+    update_user_meta($user_id, 'kpi_setup_done', 1);
 
     wp_safe_redirect(wp_get_referer() ?: home_url('/'));
     exit;
   }
 
-  private static function render_setup_form() {
-    $defaults = self::default_channels();
+  private static function render_channel_editor($channels, $formIdSuffix = '') {
+    // $channels: array of ['id','name','is_active',...]
+    ob_start(); ?>
+      <div class="kpi-channel-editor" id="kpiChannelEditor<?php echo esc_attr($formIdSuffix); ?>">
+        <?php foreach ($channels as $c): ?>
+          <div class="kpi-channel-row" data-id="<?php echo (int)$c['id']; ?>">
+            <input type="checkbox" class="kpi-channel-active" <?php checked((int)($c['is_active'] ?? 0), 1); ?>>
+            <input type="text" class="kpi-channel-name" value="<?php echo esc_attr($c['name']); ?>" placeholder="Channel name">
+            <button type="button" class="kpi-channel-remove">Remove</button>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <button type="button" class="kpi-btn kpi-btn--ghost" id="kpiAddChannel<?php echo esc_attr($formIdSuffix); ?>">+ Add channel</button>
+    <?php
+    return ob_get_clean();
+  }
+
+  private static function render_setup_form($user_id) {
+    KPI_DB::ensure_default_channels($user_id);
+    $channels = KPI_DB::get_channels($user_id, false);
 
     ob_start(); ?>
       <div class="kpi-wrap">
@@ -131,33 +134,18 @@ class KPI_Frontend {
             <div class="kpi-title">
               <div class="kpi-badge">KPI System</div>
               <h2>Set up your KPI Tracker</h2>
-              <p>Pick your marketing channels and we’ll build your personal dashboard.</p>
+              <p>Create, rename, enable/disable, and remove channels. You can add as many as you like.</p>
             </div>
           </div>
 
           <div class="kpi-card kpi-card--glass">
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-form">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-form" id="kpiSetupForm">
               <?php wp_nonce_field('kpi_save_user_setup'); ?>
               <input type="hidden" name="action" value="kpi_save_user_setup">
+              <input type="hidden" name="kpi_channels_json" id="kpi_channels_json" value="">
 
-              <div class="kpi-grid-2 kpi-mt">
-                <?php foreach ($defaults as $key => $label): ?>
-                  <label class="kpi-check">
-                    <input type="checkbox" name="channels[]" value="<?php echo esc_attr($key); ?>" checked>
-                    <span><?php echo esc_html($label); ?></span>
-                  </label>
-                <?php endforeach; ?>
-              </div>
-
-              <div class="kpi-grid-1 kpi-mt">
-                <div class="kpi-field">
-                  <label>Other Channel #1 name</label>
-                  <input type="text" name="labels[leads_other_1]" value="Other">
-                </div>
-                <div class="kpi-field">
-                  <label>Other Channel #2 name</label>
-                  <input type="text" name="labels[leads_other_2]" value="Other">
-                </div>
+              <div class="kpi-mt">
+                <?php echo self::render_channel_editor($channels); ?>
               </div>
 
               <button class="kpi-btn kpi-mt">Create my dashboard</button>
@@ -244,19 +232,22 @@ class KPI_Frontend {
     }
 
     $user_id = get_current_user_id();
-    $setup = self::get_setup($user_id);
 
-    if (empty($setup['channels'])) {
-      return self::render_setup_form();
+    // Ensure defaults exist for this user (safe no-op if already seeded)
+    KPI_DB::ensure_default_channels($user_id);
+
+    // Show setup until user submits once (so they can rename/remove/add before seeing dashboard)
+    if (!self::setup_done($user_id)) {
+      return self::render_setup_form($user_id);
     }
 
-    return self::render_dashboard($user_id, $setup);
+    return self::render_dashboard($user_id);
   }
 
   // -----------------------
   // Dashboard (Activity + Monthly)
   // -----------------------
-  private static function render_dashboard($user_id, $setup) {
+  private static function render_dashboard($user_id) {
     // tab
     $tab = isset($_GET['kpi_tab']) ? sanitize_key($_GET['kpi_tab']) : 'activity';
     if (!in_array($tab, ['activity','monthly'], true)) $tab = 'activity';
@@ -272,28 +263,38 @@ class KPI_Frontend {
       $ym = sprintf('%04d-%02d', $year, $month);
     }
 
-    $year = max(2000, min(2100, $year));
+    $minYear = 2026;
+    $year = max($minYear, min(2100, $year));
     $month = max(1, min(12, $month));
 
     $daysInMonth = (int)date('t', strtotime(sprintf('%04d-%02d-01', $year, $month)));
-    $rowsByDate = KPI_DB::get_month_rows($user_id, $year, $month);
-    $totals = KPI_DB::get_month_totals($user_id, $year, $month);
+    $monthTitle = date('F Y', strtotime(sprintf('%04d-%02d-01', $year, $month)));
 
-    $defaultLabels = self::default_channels();
-    $labels = array_merge($defaultLabels, $setup['labels']);
+    // Channels (active only)
+    $channels = KPI_DB::get_channels($user_id, true);
 
-    $channels = $setup['channels']; // selected lead channels only
+    // Maps for lookup
+    $channelIds = [];
+    foreach ($channels as $c) $channelIds[] = (int)$c['id'];
+
+    // Pipeline daily + totals
+    $pipeByDate = KPI_DB::get_month_pipeline_rows($user_id, $year, $month);
+    $pipeTotals = KPI_DB::get_month_pipeline_totals($user_id, $year, $month);
+
+    // Leads daily + totals (per channel)
+    $leadsByDate = KPI_DB::get_month_leads_map($user_id, $year, $month); // map[date][channel_id]=value
+    $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel($user_id, $year, $month); // [channel_id]=total
 
     // compute totals/stats
     $leadTotal = 0;
-    foreach ($channels as $k) $leadTotal += (float)($totals[$k] ?? 0);
+    foreach ($channelIds as $cid) $leadTotal += (float)($leadsTotalsByChannel[$cid] ?? 0);
 
-    $calls = (float)($totals['calls'] ?? 0);
-    $apps  = (float)($totals['appointments'] ?? 0);
-    $quotes = (float)($totals['quotes'] ?? 0);
-    $quoteVal = (float)($totals['quote_value'] ?? 0);
-    $sales = (float)($totals['sales'] ?? 0);
-    $salesVal = (float)($totals['sales_value'] ?? 0);
+    $calls = (float)($pipeTotals['calls'] ?? 0);
+    $apps  = (float)($pipeTotals['appointments'] ?? 0);
+    $quotes = (float)($pipeTotals['quotes'] ?? 0);
+    $quoteVal = (float)($pipeTotals['quote_value'] ?? 0);
+    $sales = (float)($pipeTotals['sales'] ?? 0);
+    $salesVal = (float)($pipeTotals['sales_value'] ?? 0);
 
     $avgQuote = $quotes > 0 ? $quoteVal / $quotes : 0;
     $avgSale  = $sales > 0 ? $salesVal / $sales : 0;
@@ -306,123 +307,171 @@ class KPI_Frontend {
     $salesFromCalls = $calls > 0 ? $sales / $calls : 0;
     $salesFromLeads = $leadTotal > 0 ? $sales / $leadTotal : 0;
 
-    $monthTitle = date('F Y', strtotime(sprintf('%04d-%02d-01', $year, $month)));
-
-    // Build Activity rows meta for Handsontable
-    $activityRows = [];
-    foreach ($channels as $k) {
-      $activityRows[] = ['key' => $k, 'label' => $labels[$k], 'type' => 'int', 'group' => 'Leads'];
+    // Build Leads rows meta for Handsontable (KEY = lead_{channel_id})
+    $leadsRows = [];
+    foreach ($channels as $c) {
+      $cid = (int)$c['id'];
+      $leadsRows[] = [
+        'key' => 'lead_' . $cid,
+        'label' => $c['name'],
+        'type' => 'int',
+        'group' => 'Leads',
+      ];
     }
-    $pipe = [
-      ['calls','Calls','int'],
-      ['appointments','Appointments','int'],
-      ['quotes','Quotes/Presentations','int'],
-      ['quote_value','$$ Value','money'],
-      ['sales','Sales','int'],
-      ['sales_value','Sales Value $$','money'],
+
+    // Pipeline rows meta
+    $salesRows = [
+      ['key'=>'calls','label'=>'Calls','type'=>'int','group'=>'Pipeline'],
+      ['key'=>'appointments','label'=>'Appointments','type'=>'int','group'=>'Pipeline'],
+      ['key'=>'quotes','label'=>'Quotes/Presentations','type'=>'int','group'=>'Pipeline'],
+      ['key'=>'quote_value','label'=>'$$ Value','type'=>'money','group'=>'Pipeline'],
+      ['key'=>'sales','label'=>'Sales','type'=>'int','group'=>'Pipeline'],
+      ['key'=>'sales_value','label'=>'Sales Value $$','type'=>'money','group'=>'Pipeline'],
     ];
-    foreach ($pipe as $p) {
-      $activityRows[] = ['key' => $p[0], 'label' => $p[1], 'type' => $p[2], 'group' => 'Pipeline'];
-    }
 
-    // Pre-fill matrix [rowIndex][dayIndex] (1..daysInMonth)
-    $prefill = [];
-    for ($ri=0; $ri<count($activityRows); $ri++) {
-      $prefill[$ri] = [];
+    // Prefill leads: [rowIndex][dayIndex]
+    $leadsPrefill = [];
+    for ($ri=0; $ri<count($leadsRows); $ri++) {
+      $leadsPrefill[$ri] = [];
+      $cid = (int) str_replace('lead_', '', $leadsRows[$ri]['key']);
       for ($d=1; $d<=$daysInMonth; $d++) {
         $date = sprintf('%04d-%02d-%02d', $year, $month, $d);
-        $key = $activityRows[$ri]['key'];
-        $val = isset($rowsByDate[$date][$key]) ? $rowsByDate[$date][$key] : 0;
-        $prefill[$ri][] = $val;
+        $val = isset($leadsByDate[$date][$cid]) ? (int)$leadsByDate[$date][$cid] : 0;
+        $leadsPrefill[$ri][] = $val;
       }
     }
 
-    // Monthly figures data
-    $monthly = KPI_DB::get_year_monthly_totals($user_id, $year);
+    // Prefill pipeline: [rowIndex][dayIndex]
+    $salesPrefill = [];
+    for ($ri=0; $ri<count($salesRows); $ri++) {
+      $salesPrefill[$ri] = [];
+      $key = $salesRows[$ri]['key'];
+      for ($d=1; $d<=$daysInMonth; $d++) {
+        $date = sprintf('%04d-%02d-%02d', $year, $month, $d);
+        $val = isset($pipeByDate[$date][$key]) ? $pipeByDate[$date][$key] : 0;
+        $salesPrefill[$ri][] = $val;
+      }
+    }
+
+    // Monthly figures data (NEW)
+    $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $year); // [m][field]
+    $monthlyLeads = KPI_DB::get_year_leads_monthly_totals($user_id, $year);       // [m][channel_id]
     $active = self::get_active_months_user($user_id, $year);
 
-    // Build monthly grid rows (strings for display)
+    // Build monthly grid rows
     $monthlyGrid = [];
 
     // Section header: Lead Data Totals
     $monthlyGrid[] = self::build_section_header('Lead Data Totals');
 
-    // Leads section rows
-    foreach ($channels as $k) {
-      $monthlyGrid[] = self::build_monthly_row($labels[$k], 'int', $monthly, $active, function($m) use ($k) {
-        return (float)($m[$k] ?? 0);
-      });
+    foreach ($channels as $c) {
+      $cid = (int)$c['id'];
+      $monthlyGrid[] = self::build_monthly_row(
+        $c['name'],
+        'int',
+        $monthlyLeads,
+        $active,
+        function($m) use ($cid) {
+          return (float)($m[$cid] ?? 0);
+        }
+      );
     }
 
-    // Total leads
-    $monthlyGrid[] = self::build_monthly_row('Total Number Of Leads', 'int', $monthly, $active, function($m) use ($channels) {
-      $sum = 0;
-      foreach ($channels as $k) $sum += (float)($m[$k] ?? 0);
-      return $sum;
-    }, 'total');
+    $monthlyGrid[] = self::build_monthly_row(
+      'Total Number Of Leads',
+      'int',
+      $monthlyLeads,
+      $active,
+      function($m) use ($channelIds) {
+        $sum = 0;
+        foreach ($channelIds as $cid) $sum += (float)($m[$cid] ?? 0);
+        return $sum;
+      },
+      'total'
+    );
 
     // Section header: Sales Data Totals
     $monthlyGrid[] = self::build_section_header('Sales Data Totals');
 
-    // Pipeline totals
-    $monthlyGrid[] = self::build_monthly_row('Calls', 'int', $monthly, $active, fn($m)=>(float)($m['calls']??0));
-    $monthlyGrid[] = self::build_monthly_row('Appointments', 'int', $monthly, $active, fn($m)=>(float)($m['appointments']??0));
-    $monthlyGrid[] = self::build_monthly_row('Quotes/Proposals Submitted', 'int', $monthly, $active, fn($m)=>(float)($m['quotes']??0));
-    $monthlyGrid[] = self::build_monthly_row('$$ Value', 'money0', $monthly, $active, fn($m)=>(float)($m['quote_value']??0));
-    $monthlyGrid[] = self::build_monthly_row('Sales', 'int', $monthly, $active, fn($m)=>(float)($m['sales']??0));
-
-    // Total Value of Sales
-    $monthlyGrid[] = self::build_monthly_row('Total Value of Sales', 'money0', $monthly, $active, fn($m)=>(float)($m['sales_value']??0), 'total');
+    $monthlyGrid[] = self::build_monthly_row('Calls', 'int', $monthlyPipeline, $active, fn($m)=>(float)($m['calls']??0));
+    $monthlyGrid[] = self::build_monthly_row('Appointments', 'int', $monthlyPipeline, $active, fn($m)=>(float)($m['appointments']??0));
+    $monthlyGrid[] = self::build_monthly_row('Quotes/Proposals Submitted', 'int', $monthlyPipeline, $active, fn($m)=>(float)($m['quotes']??0));
+    $monthlyGrid[] = self::build_monthly_row('$$ Value', 'money0', $monthlyPipeline, $active, fn($m)=>(float)($m['quote_value']??0));
+    $monthlyGrid[] = self::build_monthly_row('Sales', 'int', $monthlyPipeline, $active, fn($m)=>(float)($m['sales']??0));
+    $monthlyGrid[] = self::build_monthly_row('Total Value of Sales', 'money0', $monthlyPipeline, $active, fn($m)=>(float)($m['sales_value']??0), 'total');
 
     // Section header: Statistics
     $monthlyGrid[] = self::build_section_header('Statistics');
 
-    // Stats (percent + money)
-    $monthlyGrid[] = self::build_monthly_row('Average Quote/Proposal Value', 'money0', $monthly, $active, function($m){
+    $monthlyGrid[] = self::build_monthly_row('Average Quote/Proposal Value', 'money0', $monthlyPipeline, $active, function($m){
       $q = (float)($m['quotes']??0);
       $v = (float)($m['quote_value']??0);
       return $q>0 ? $v/$q : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Average Sale Value', 'money0', $monthly, $active, function($m){
+    $monthlyGrid[] = self::build_monthly_row('Average Sale Value', 'money0', $monthlyPipeline, $active, function($m){
       $s = (float)($m['sales']??0);
       $v = (float)($m['sales_value']??0);
       return $s>0 ? $v/$s : 0;
     });
 
-    // Empty row separator
     $monthlyGrid[] = self::build_empty_row();
 
-    $monthlyGrid[] = self::build_monthly_row('Calls from Leads', 'pct', $monthly, $active, function($m) use ($channels){
-      $leads=0; foreach($channels as $k) $leads+=(float)($m[$k]??0);
-      $calls=(float)($m['calls']??0);
+    $monthlyGrid[] = self::build_monthly_row('Calls from Leads', 'pct', $monthlyPipeline, $active, function($m) use ($monthlyLeads, $channelIds){
+      // NOTE: $m here is pipeline month; need leads for same month in build_monthly_row loop
+      return 0; // overwritten below (we don't have month index inside getter)
+    });
+
+    // Replace the 7 ratio rows with versions that can see month index:
+    array_pop($monthlyGrid); // remove placeholder we pushed above
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Calls from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
+      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+      $calls=(float)($monthlyPipeline[$month]['calls'] ?? 0);
       return $leads>0 ? $calls/$leads : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Appointments from Calls', 'pct', $monthly, $active, function($m){
-      $calls=(float)($m['calls']??0); $apps=(float)($m['appointments']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Appointments from Calls', 'pct', $active, function($month) use ($monthlyPipeline){
+      $calls=(float)($monthlyPipeline[$month]['calls'] ?? 0);
+      $apps=(float)($monthlyPipeline[$month]['appointments'] ?? 0);
       return $calls>0 ? $apps/$calls : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Appointments from Leads', 'pct', $monthly, $active, function($m) use ($channels){
-      $leads=0; foreach($channels as $k) $leads+=(float)($m[$k]??0);
-      $apps=(float)($m['appointments']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Appointments from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
+      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+      $apps=(float)($monthlyPipeline[$month]['appointments'] ?? 0);
       return $leads>0 ? $apps/$leads : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Quotes/Proposals From Appointments', 'pct', $monthly, $active, function($m){
-      $apps=(float)($m['appointments']??0); $q=(float)($m['quotes']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Quotes/Proposals From Appointments', 'pct', $active, function($month) use ($monthlyPipeline){
+      $apps=(float)($monthlyPipeline[$month]['appointments'] ?? 0);
+      $q=(float)($monthlyPipeline[$month]['quotes'] ?? 0);
       return $apps>0 ? $q/$apps : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Sales from Quotes/Proposals', 'pct', $monthly, $active, function($m){
-      $q=(float)($m['quotes']??0); $s=(float)($m['sales']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Sales from Quotes/Proposals', 'pct', $active, function($month) use ($monthlyPipeline){
+      $q=(float)($monthlyPipeline[$month]['quotes'] ?? 0);
+      $s=(float)($monthlyPipeline[$month]['sales'] ?? 0);
       return $q>0 ? $s/$q : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Sales from Calls', 'pct', $monthly, $active, function($m){
-      $calls=(float)($m['calls']??0); $s=(float)($m['sales']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Sales from Calls', 'pct', $active, function($month) use ($monthlyPipeline){
+      $calls=(float)($monthlyPipeline[$month]['calls'] ?? 0);
+      $s=(float)($monthlyPipeline[$month]['sales'] ?? 0);
       return $calls>0 ? $s/$calls : 0;
     });
-    $monthlyGrid[] = self::build_monthly_row('Sales From Leads', 'pct', $monthly, $active, function($m) use ($channels){
-      $leads=0; foreach($channels as $k) $leads+=(float)($m[$k]??0);
-      $s=(float)($m['sales']??0);
+
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Sales From Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
+      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+      $s=(float)($monthlyPipeline[$month]['sales'] ?? 0);
       return $leads>0 ? $s/$leads : 0;
     });
+
+    // Lead totals by channel for summary cards
+    $leadTotalsByKey = [];
+    foreach ($channels as $c) {
+      $cid = (int)$c['id'];
+      $leadTotalsByKey['lead_' . $cid] = (int)($leadsTotalsByChannel[$cid] ?? 0);
+    }
 
     ob_start(); ?>
       <div class="kpi-wrap">
@@ -442,7 +491,9 @@ class KPI_Frontend {
                   <select id="kpiYearSelectActivity" onchange="updateActivityUrl()">
                     <?php
                     $currentYear = (int)date('Y');
-                    for ($y = $currentYear; $y >= $currentYear - 10; $y--): ?>
+                    $minYear = 2026;
+                    $startYear = max($minYear, $currentYear);
+                    for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                       <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
                     <?php endfor; ?>
                   </select>
@@ -478,9 +529,11 @@ class KPI_Frontend {
                 <label for="kpiYearSelectMonthly">Year</label>
                 <select id="kpiYearSelectMonthly" onchange="window.location.href='?kpi_tab=monthly&kpi_year='+this.value">
                   <?php
-                  $currentYear = (int)date('Y');
-                  for ($y = $currentYear; $y >= $currentYear - 10; $y--): ?>
-                    <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
+                    $currentYear = (int)date('Y');
+                    $minYear = 2026;
+                    $startYear = max($minYear, $currentYear);
+                    for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
+                      <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
                   <?php endfor; ?>
                 </select>
               </div>
@@ -492,6 +545,7 @@ class KPI_Frontend {
               </div>
             </div>
           </div>
+
           <?php if ($tab === 'activity'): ?>
             <div class="kpi-savebar">
               <button class="kpi-btn kpi-btn--save kpi-btn--save-bar" type="submit" form="kpiActivityForm">Save Month</button>
@@ -499,29 +553,6 @@ class KPI_Frontend {
           <?php endif; ?>
 
           <?php if ($tab === 'activity'): ?>
-            <?php
-            // Build separate arrays for leads and sales rows
-            $leadsRows = [];
-            $leadsRowsPrefill = [];
-            $salesRows = [];
-            $salesRowsPrefill = [];
-
-            foreach ($activityRows as $i => $row) {
-              if ($row['group'] === 'Leads') {
-                $leadsRows[] = $row;
-                $leadsRowsPrefill[] = $prefill[$i];
-              } else {
-                $salesRows[] = $row;
-                $salesRowsPrefill[] = $prefill[$i];
-              }
-            }
-
-            // Calculate per-channel lead totals for the summary
-            $leadTotalsByChannel = [];
-            foreach ($channels as $k) {
-              $leadTotalsByChannel[$k] = (int)($totals[$k] ?? 0);
-            }
-            ?>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="kpiActivityForm">
               <?php wp_nonce_field('kpi_front_save_month'); ?>
@@ -551,20 +582,28 @@ class KPI_Frontend {
               </div>
             </form>
 
-            <!-- Summary Section - Responsive Flex Cards -->
+            <!-- Summary Section -->
             <div class="kpi-summary-flex">
-              <!-- Lead Data Totals -->
               <div class="kpi-card kpi-card--summary">
                 <h3>Lead Data Totals</h3>
                 <div class="kpi-summary-grid">
-                  <?php foreach ($channels as $k): ?>
-                    <div class="kpi-kv"><span><?php echo esc_html($labels[$k]); ?></span><strong class="kpi-lead-total" data-key="<?php echo esc_attr($k); ?>"><?php echo esc_html($leadTotalsByChannel[$k]); ?></strong></div>
+                  <?php foreach ($channels as $c):
+                    $cid = (int)$c['id'];
+                    $k = 'lead_' . $cid;
+                    $val = (int)($leadsTotalsByChannel[$cid] ?? 0);
+                  ?>
+                    <div class="kpi-kv">
+                      <span><?php echo esc_html($c['name']); ?></span>
+                      <strong class="kpi-lead-total" data-key="<?php echo esc_attr($k); ?>"><?php echo esc_html($val); ?></strong>
+                    </div>
                   <?php endforeach; ?>
-                  <div class="kpi-kv kpi-kv--total"><span>Total Number Of Leads</span><strong id="kpi_total_leads" class="kpi-total-highlight"><?php echo esc_html((int)$leadTotal); ?></strong></div>
+                  <div class="kpi-kv kpi-kv--total">
+                    <span>Total Number Of Leads</span>
+                    <strong id="kpi_total_leads" class="kpi-total-highlight"><?php echo esc_html((int)$leadTotal); ?></strong>
+                  </div>
                 </div>
               </div>
 
-              <!-- Sales Data Totals -->
               <div class="kpi-card kpi-card--summary">
                 <h3>Sales Data Totals</h3>
                 <div class="kpi-summary-grid">
@@ -577,7 +616,6 @@ class KPI_Frontend {
                 </div>
               </div>
 
-              <!-- Statistics -->
               <div class="kpi-card kpi-card--summary">
                 <h3>Statistics</h3>
                 <div class="kpi-summary-grid">
@@ -605,33 +643,19 @@ class KPI_Frontend {
                 <button type="button" id="kpiSettingsClose" class="kpi-drawer-close">&times;</button>
               </div>
               <div class="kpi-drawer-body">
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form">
+                <?php
+                  // include inactive too so user can re-enable ones they disabled earlier
+                  $allChannels = KPI_DB::get_channels($user_id, false);
+                ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form" id="kpiSettingsForm">
                   <?php wp_nonce_field('kpi_save_user_setup'); ?>
                   <input type="hidden" name="action" value="kpi_save_user_setup">
+                  <input type="hidden" name="kpi_channels_json" id="kpi_channels_json_settings" value="">
 
-                  <p class="kpi-drawer-hint">Select which lead channels to track:</p>
+                  <p class="kpi-drawer-hint">Edit your channels (rename, enable/disable, add/remove):</p>
 
-                  <div class="kpi-drawer-checks">
-                    <?php foreach ($defaultLabels as $key => $label):
-                      $isChecked = in_array($key, $channels);
-                      $displayLabel = isset($setup['labels'][$key]) ? $setup['labels'][$key] : $label;
-                    ?>
-                      <label class="kpi-drawer-check">
-                        <input type="checkbox" name="channels[]" value="<?php echo esc_attr($key); ?>" <?php checked($isChecked); ?>>
-                        <span><?php echo esc_html($displayLabel); ?></span>
-                      </label>
-                    <?php endforeach; ?>
-                  </div>
-
-                  <div class="kpi-drawer-fields">
-                    <div class="kpi-drawer-field">
-                      <label>Other Channel #1 name</label>
-                      <input type="text" name="labels[leads_other_1]" value="<?php echo esc_attr($setup['labels']['leads_other_1'] ?? 'Other'); ?>">
-                    </div>
-                    <div class="kpi-drawer-field">
-                      <label>Other Channel #2 name</label>
-                      <input type="text" name="labels[leads_other_2]" value="<?php echo esc_attr($setup['labels']['leads_other_2'] ?? 'Other'); ?>">
-                    </div>
+                  <div class="kpi-drawer-editor">
+                    <?php echo self::render_channel_editor($allChannels, '_settings'); ?>
                   </div>
 
                   <button type="submit" class="kpi-btn kpi-drawer-submit">Save Settings</button>
@@ -640,13 +664,14 @@ class KPI_Frontend {
             </div>
 
             <script type="application/json" id="kpi_leads_rows"><?php echo wp_json_encode($leadsRows); ?></script>
-            <script type="application/json" id="kpi_leads_prefill"><?php echo wp_json_encode($leadsRowsPrefill); ?></script>
+            <script type="application/json" id="kpi_leads_prefill"><?php echo wp_json_encode($leadsPrefill); ?></script>
             <script type="application/json" id="kpi_sales_rows"><?php echo wp_json_encode($salesRows); ?></script>
-            <script type="application/json" id="kpi_sales_prefill"><?php echo wp_json_encode($salesRowsPrefill); ?></script>
+            <script type="application/json" id="kpi_sales_prefill"><?php echo wp_json_encode($salesPrefill); ?></script>
             <script type="application/json" id="kpi_activity_meta"><?php echo wp_json_encode([
               'ym' => $ym,
               'daysInMonth' => $daysInMonth,
-              'selectedLeadKeys' => $channels,
+              // these keys are the HOT row keys (lead_123 etc)
+              'selectedLeadKeys' => array_map(function($c){ return 'lead_' . (int)$c['id']; }, $channels),
             ]); ?></script>
 
           <?php else: ?>
@@ -663,7 +688,7 @@ class KPI_Frontend {
               <script type="application/json" id="kpi_monthly_grid"><?php echo wp_json_encode($monthlyGrid); ?></script>
               <script type="application/json" id="kpi_monthly_meta"><?php echo wp_json_encode([
                 'year' => $year,
-                'yearShort' => substr($year, -2)
+                'yearShort' => substr((string)$year, -2)
               ]); ?></script>
             </div>
           <?php endif; ?>
@@ -673,6 +698,9 @@ class KPI_Frontend {
     return ob_get_clean();
   }
 
+  // -----------------------
+  // Monthly grid helpers
+  // -----------------------
   private static function build_monthly_row($label, $fmt, $monthly, $active, $getter, $rowType='') {
     $row = [];
     $row[] = $label;
@@ -696,15 +724,43 @@ class KPI_Frontend {
     $row[] = self::format_monthly_cell($fmt, $ytd);
     $row[] = self::format_monthly_cell($fmt, $avg);
 
-    // mark row type for JS styling
     $row[] = $rowType;
+    return $row;
+  }
 
+  // Same layout, but getter receives month index (1..12)
+  private static function build_monthly_row_with_month_index($label, $fmt, $active, $getter, $rowType='') {
+    $row = [];
+    $row[] = $label;
+
+    $ytd = 0;
+    $den = 0;
+
+    for ($m=1; $m<=12; $m++) {
+      $val = (float)$getter($m);
+      $row[] = self::format_monthly_cell($fmt, $val);
+
+      if ($val > 0) {
+        $ytd += $val;
+        $den++;
+      } else {
+        // still count month if any underlying data exists? we can't know here, so we don't.
+        // keeps behavior consistent for ratios: only months with non-zero ratio count
+      }
+    }
+
+    $avg = $den > 0 ? $ytd / $den : 0;
+
+    $row[] = self::format_monthly_cell($fmt, $ytd);
+    $row[] = self::format_monthly_cell($fmt, $avg);
+
+    $row[] = $rowType;
     return $row;
   }
 
   private static function month_has_any_data($monthData) {
     if (!is_array($monthData)) return false;
-    foreach ($monthData as $key => $val) {
+    foreach ($monthData as $val) {
       if ((float)$val > 0) return true;
     }
     return false;
@@ -732,7 +788,6 @@ class KPI_Frontend {
     if ($fmt === 'money0') return self::fmt_money0($val);
     if ($fmt === 'money2') return self::fmt_money2($val);
     if ($fmt === 'pct') return self::fmt_percent2($val);
-    // int
     return (string)((int)round($val));
   }
 
@@ -756,19 +811,30 @@ class KPI_Frontend {
       wp_die('Invalid payload');
     }
 
+    $pipelineKeys = KPI_DB::pipeline_fields();
+
     foreach ($payload['kpi'] as $date => $fields) {
       $date = sanitize_text_field($date);
       if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) continue;
-
       if (!is_array($fields)) continue;
 
-      $clean = [];
-      foreach (KPI_DB::fields() as $f) {
-        if (!isset($fields[$f])) continue;
-        $clean[$f] = KPI_DB::sanitize_numeric($f, $fields[$f]);
+      // 1) Leads per channel (lead_{id})
+      foreach ($fields as $k => $v) {
+        if (strpos($k, 'lead_') === 0) {
+          $cid = (int) substr($k, 5);
+          KPI_DB::upsert_lead_day($user_id, $cid, $date, $v);
+        }
       }
 
-      KPI_DB::upsert_day($user_id, $date, $clean);
+      // 2) Pipeline in kpi_daily (calls, appointments, etc)
+      $pipe = [];
+      foreach ($pipelineKeys as $pk) {
+        if (!array_key_exists($pk, $fields)) continue;
+        $pipe[$pk] = KPI_DB::sanitize_numeric($pk, $fields[$pk]);
+      }
+      if (!empty($pipe)) {
+        KPI_DB::upsert_pipeline_day($user_id, $date, $pipe);
+      }
     }
 
     wp_safe_redirect(wp_get_referer() ?: home_url('/'));

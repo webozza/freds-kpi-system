@@ -13,7 +13,7 @@
   function fmtMoney(n) {
     n = clamp0(n);
     var fixed = (Math.round(n * 100) / 100).toFixed(
-      kpiFront?.moneyDecimals ?? 2
+      kpiFront?.moneyDecimals ?? 2,
     );
     var parts = fixed.split(".");
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -125,7 +125,13 @@
   }
 
   // ---------- Create a Handsontable for Activity ----------
-  function createActivityTable(containerId, rows, prefill, daysInMonth, isLeadsTable) {
+  function createActivityTable(
+    containerId,
+    rows,
+    prefill,
+    daysInMonth,
+    isLeadsTable,
+  ) {
     var container = document.getElementById(containerId);
     if (!container || !window.Handsontable) return null;
 
@@ -152,6 +158,7 @@
 
       return [r.label].concat(dayVals).concat([total]);
     });
+
     if (hasTotalRow) {
       var totalRow = [isLeadsTable ? "Total Leads" : "Total Sales"];
       var grandTotal = 0;
@@ -172,11 +179,8 @@
       td.style.fontWeight = "800";
       td.style.whiteSpace = "nowrap";
       td.classList.add("kpi-hot-metric");
-      if (isLeadsTable) {
-        td.classList.add("kpi-hot-metric--leads");
-      } else {
-        td.classList.add("kpi-hot-metric--pipe");
-      }
+      if (isLeadsTable) td.classList.add("kpi-hot-metric--leads");
+      else td.classList.add("kpi-hot-metric--pipe");
     }
 
     function totalRenderer(instance, td, row, col, prop, value) {
@@ -191,7 +195,7 @@
       td.classList.add("kpi-hot-total-row");
     }
 
-    function numRenderer(instance, td, row, col, prop, value) {
+    function numRenderer(instance, td) {
       Handsontable.renderers.NumericRenderer.apply(this, arguments);
       td.classList.add("kpi-hot-num");
     }
@@ -264,9 +268,8 @@
             var grand = 0;
             for (var d = 1; d <= daysInMonth; d++) {
               var daySum = 0;
-              for (var r = 0; r < rows.length; r++) {
+              for (var r = 0; r < rows.length; r++)
                 daySum += toNum(hot.getDataAtCell(r, d));
-              }
               grand += daySum;
               hot.setDataAtCell(totalRowIndex, d, fmtInt(daySum), "calc");
             }
@@ -287,9 +290,8 @@
         var grand = 0;
         for (var d = 1; d <= daysInMonth; d++) {
           var daySum = 0;
-          for (var r = 0; r < rows.length; r++) {
+          for (var r = 0; r < rows.length; r++)
             daySum += toNum(hot.getDataAtCell(r, d));
-          }
           grand += daySum;
           hot.setDataAtCell(totalRowIndex, d, fmtInt(daySum), "calc");
         }
@@ -309,20 +311,28 @@
     activityMeta = readJson("kpi_activity_meta") || {};
     var daysInMonth = activityMeta.daysInMonth || 30;
 
-    // Initialize Leads table
     if (document.getElementById("kpiHotLeads")) {
-      hotLeads = createActivityTable("kpiHotLeads", leadsRows, leadsPrefill, daysInMonth, true);
+      hotLeads = createActivityTable(
+        "kpiHotLeads",
+        leadsRows,
+        leadsPrefill,
+        daysInMonth,
+        true,
+      );
     }
 
-    // Initialize Sales table
     if (document.getElementById("kpiHotSales")) {
-      hotSales = createActivityTable("kpiHotSales", salesRows, salesPrefill, daysInMonth, false);
+      hotSales = createActivityTable(
+        "kpiHotSales",
+        salesRows,
+        salesPrefill,
+        daysInMonth,
+        false,
+      );
     }
 
-    // Initial card recalc
     recalcAllCards();
 
-    // Form submit handler
     var form = document.getElementById("kpiActivityForm");
     if (form) {
       form.addEventListener("submit", function () {
@@ -339,16 +349,13 @@
 
           payload.kpi[date] = {};
 
-          // Get data from Leads table
           if (hotLeads) {
             leadsRows.forEach(function (r, i) {
               var v = toNum(hotLeads.getDataAtCell(i, d));
-              payload.kpi[date][r.key] =
-                r.type === "money" ? Math.round(v * 100) / 100 : Math.round(v);
+              payload.kpi[date][r.key] = Math.round(v); // leads always int
             });
           }
 
-          // Get data from Sales table
           if (hotSales) {
             salesRows.forEach(function (r, i) {
               var v = toNum(hotSales.getDataAtCell(i, d));
@@ -373,40 +380,53 @@
     var meta = readJson("kpi_monthly_meta") || {};
     if (!grid.length) return;
 
-    var yearShort = meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
+    var yearShort =
+      meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
 
     var data = grid.map(function (r) {
       return r.slice(0, r.length - 1);
     });
 
     var rowTypes = grid.map(function (r) {
-      var flag = r[r.length - 1] || '';
-      if (flag === '__section__') return 'section';
-      if (flag === '__empty__') return 'empty';
-      if (flag === 'total') return 'total';
-      return '';
+      var flag = r[r.length - 1] || "";
+      if (flag === "__section__") return "section";
+      if (flag === "__empty__") return "empty";
+      if (flag === "total") return "total";
+      return "";
     });
 
-    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     var colHeaders = ["Metric"];
-    for (var i = 0; i < 12; i++) {
+    for (var i = 0; i < 12; i++)
       colHeaders.push(monthNames[i] + "-" + yearShort);
-    }
     colHeaders.push("Year to Date");
     colHeaders.push("Averages");
 
-    function metricRenderer(instance, td, row, col, prop, value) {
+    function metricRenderer(instance, td, row) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
       var type = rowTypes[row];
 
-      if (type === 'section') {
+      if (type === "section") {
         td.style.fontWeight = "900";
         td.style.fontSize = "13px";
         td.classList.add("kpi-hot-section");
-      } else if (type === 'total') {
+      } else if (type === "total") {
         td.style.fontWeight = "900";
         td.classList.add("kpi-hot-metric", "kpi-hot-metric--total");
-      } else if (type === 'empty') {
+      } else if (type === "empty") {
         td.classList.add("kpi-hot-empty");
       } else {
         td.style.fontWeight = "700";
@@ -414,16 +434,16 @@
       }
     }
 
-    function cellRenderer(instance, td, row, col, prop, value) {
+    function cellRenderer(instance, td, row, col) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
       var type = rowTypes[row];
 
-      if (type === 'section') {
+      if (type === "section") {
         td.classList.add("kpi-hot-section");
-      } else if (type === 'total') {
+      } else if (type === "total") {
         td.style.fontWeight = "800";
         td.classList.add("kpi-hot-num", "kpi-hot-num--total");
-      } else if (type === 'empty') {
+      } else if (type === "empty") {
         td.classList.add("kpi-hot-empty");
       } else {
         td.classList.add("kpi-hot-num");
@@ -431,9 +451,7 @@
 
       if (col === 13 || col === 14) {
         td.classList.add("kpi-hot-summary");
-        if (type === 'total') {
-          td.style.fontWeight = "900";
-        }
+        if (type === "total") td.style.fontWeight = "900";
       }
     }
 
@@ -477,46 +495,114 @@
     if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
     if (overlay) overlay.addEventListener("click", closeDrawer);
 
-    // Close on escape key
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && drawer.classList.contains("is-open")) {
+      if (e.key === "Escape" && drawer.classList.contains("is-open"))
         closeDrawer();
-      }
     });
   }
 
-  // ---------- Setup form: live update "Other" checkbox labels ----------
-  function initSetupOtherLabelSync() {
-    var $in1 = $('input[name="labels[leads_other_1]"]');
-    var $in2 = $('input[name="labels[leads_other_2]"]');
+  // ---------- Channel Editor (Setup + Drawer) ----------
+  function initOneChannelEditor(editorId, addBtnId, jsonInputId) {
+    var editor = document.getElementById(editorId);
+    var addBtn = document.getElementById(addBtnId);
+    var jsonInput = document.getElementById(jsonInputId);
 
-    if (!$in1.length && !$in2.length) return;
+    if (!editor || !addBtn || !jsonInput) return;
 
-    function safeLabel(v) {
-      v = (v || "").trim();
-      return v ? v : "Other";
+    function collectRows() {
+      var rows = editor.querySelectorAll(".kpi-channel-row");
+      var out = [];
+      var order = 0;
+
+      rows.forEach(function (row) {
+        var idAttr = row.getAttribute("data-id");
+        var id = idAttr ? parseInt(idAttr, 10) : 0;
+
+        var nameEl = row.querySelector(".kpi-channel-name");
+        var activeEl = row.querySelector(".kpi-channel-active");
+
+        var name = (nameEl ? nameEl.value : "").trim();
+        if (!name) return;
+
+        out.push({
+          id: id, // 0 means "new"
+          name: name,
+          is_active: activeEl && activeEl.checked ? 1 : 0,
+          sort_order: order++,
+        });
+      });
+
+      return out;
     }
 
-    function setCheckboxText(leadKey, txt) {
-      var $cb = $('input[name="channels[]"][value="' + leadKey + '"]');
-      if (!$cb.length) return;
-      $cb.closest(".kpi-check").find("span").text(txt);
+    function syncJson() {
+      jsonInput.value = JSON.stringify(collectRows());
     }
 
-    function syncAll() {
-      if ($in1.length) setCheckboxText("leads_other_1", safeLabel($in1.val()));
-      if ($in2.length) setCheckboxText("leads_other_2", safeLabel($in2.val()));
-    }
-
-    syncAll();
-
-    $in1.on("input", function () {
-      setCheckboxText("leads_other_1", safeLabel(this.value));
+    // Live updates
+    editor.addEventListener("input", function (e) {
+      if (e.target.classList.contains("kpi-channel-name")) syncJson();
     });
 
-    $in2.on("input", function () {
-      setCheckboxText("leads_other_2", safeLabel(this.value));
+    editor.addEventListener("change", function (e) {
+      if (e.target.classList.contains("kpi-channel-active")) syncJson();
     });
+
+    // Remove row (event delegation)
+    editor.addEventListener("click", function (e) {
+      if (e.target.classList.contains("kpi-channel-remove")) {
+        e.preventDefault();
+        var row = e.target.closest(".kpi-channel-row");
+        if (row) row.remove();
+        syncJson();
+      }
+    });
+
+    // Add row
+    addBtn.addEventListener("click", function () {
+      var row = document.createElement("div");
+      row.className = "kpi-channel-row";
+      row.setAttribute("data-id", "0");
+      row.innerHTML =
+        '<input type="checkbox" class="kpi-channel-active" checked>' +
+        '<input type="text" class="kpi-channel-name" placeholder="Channel name" value="">' +
+        '<button type="button" class="kpi-channel-remove">Remove</button>';
+
+      editor.appendChild(row);
+
+      // focus new input
+      var inp = row.querySelector(".kpi-channel-name");
+      if (inp) inp.focus();
+
+      syncJson();
+    });
+
+    // Ensure JSON is updated right before submit
+    var form = editor.closest("form");
+    if (form) {
+      form.addEventListener("submit", function () {
+        syncJson();
+      });
+    }
+
+    // initial
+    syncJson();
+  }
+
+  function initChannelEditors() {
+    // Setup page editor
+    initOneChannelEditor(
+      "kpiChannelEditor",
+      "kpiAddChannel",
+      "kpi_channels_json",
+    );
+
+    // Drawer editor
+    initOneChannelEditor(
+      "kpiChannelEditor_settings",
+      "kpiAddChannel_settings",
+      "kpi_channels_json_settings",
+    );
   }
 
   // ---------- init ----------
@@ -524,6 +610,6 @@
     initHotActivity();
     initHotMonthly();
     initSettingsDrawer();
-    initSetupOtherLabelSync();
+    initChannelEditors();
   });
 })(jQuery);

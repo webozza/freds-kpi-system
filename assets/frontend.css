@@ -1700,3 +1700,251 @@
     width: 100%;
   }
 }
+
+/* NEW SHIT */
+
+/* =========================================================
+   CHANNEL EDITOR (Setup + Settings) — Scoped + Non-overridable
+   REQUIREMENT:
+   - Setup (#kpiChannelEditor) = 2 columns desktop, 1 column mobile
+   - Settings (#kpiChannelEditor_settings) = ALWAYS 1 column
+   - Every selector MUST start with #kpiChannelEditor or #kpiChannelEditor_settings
+========================================================= */
+
+/* -------------------------
+   GRID LAYOUT
+------------------------- */
+
+/* Setup editor: 2 columns */
+#kpiChannelEditor.kpi-channel-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Setup editor: mobile 1 column */
+@media (max-width: 640px) {
+  #kpiChannelEditor.kpi-channel-editor {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Settings editor: ALWAYS 1 column */
+#kpiChannelEditor_settings.kpi-channel-editor {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* -------------------------
+   ROW CARD (matches old vibe)
+------------------------- */
+
+#kpiChannelEditor .kpi-channel-row,
+#kpiChannelEditor_settings .kpi-channel-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 12px;
+  border-radius: 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.02)
+  );
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+#kpiChannelEditor .kpi-channel-row:hover,
+#kpiChannelEditor_settings .kpi-channel-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background:
+    radial-gradient(
+      600px 120px at 25% 0%,
+      rgba(102, 240, 194, 0.1),
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+#kpiChannelEditor .kpi-channel-row:focus-within,
+#kpiChannelEditor_settings .kpi-channel-row:focus-within {
+  border-color: rgba(102, 240, 194, 0.35);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.32),
+    0 0 0 3px rgba(102, 240, 194, 0.12);
+}
+
+/* Active glow */
+#kpiChannelEditor .kpi-channel-row:has(.kpi-channel-active:checked),
+#kpiChannelEditor_settings .kpi-channel-row:has(.kpi-channel-active:checked) {
+  border-color: rgba(102, 240, 194, 0.28);
+  background:
+    radial-gradient(
+      700px 140px at 20% 0%,
+      rgba(102, 240, 194, 0.16),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+/* -------------------------
+   CHECKBOX (custom)
+------------------------- */
+
+#kpiChannelEditor .kpi-channel-active,
+#kpiChannelEditor_settings .kpi-channel-active {
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  cursor: pointer;
+}
+
+#kpiChannelEditor .kpi-channel-active::after,
+#kpiChannelEditor_settings .kpi-channel-active::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid rgba(11, 18, 32, 0.95);
+  border-bottom: 2px solid rgba(11, 18, 32, 0.95);
+  transform: rotate(-45deg) scale(0.85);
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+#kpiChannelEditor .kpi-channel-active:checked,
+#kpiChannelEditor_settings .kpi-channel-active:checked {
+  background: linear-gradient(
+    180deg,
+    var(--kpi-accent),
+    rgba(102, 240, 194, 0.7)
+  );
+  border-color: rgba(102, 240, 194, 0.65);
+  box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
+}
+
+#kpiChannelEditor .kpi-channel-active:checked::after,
+#kpiChannelEditor_settings .kpi-channel-active:checked::after {
+  opacity: 1;
+  transform: rotate(-45deg) scale(1);
+}
+
+/* -------------------------
+   INPUT (channel name)
+------------------------- */
+
+#kpiChannelEditor .kpi-channel-name,
+#kpiChannelEditor_settings .kpi-channel-name {
+  flex: 1;
+  height: 44px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  color: var(--kpi-text);
+
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+#kpiChannelEditor .kpi-channel-name::placeholder,
+#kpiChannelEditor_settings .kpi-channel-name::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#kpiChannelEditor .kpi-channel-name:focus,
+#kpiChannelEditor_settings .kpi-channel-name:focus {
+  border-color: rgba(102, 240, 194, 0.55);
+  box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+/* -------------------------
+   REMOVE BUTTON (compact)
+------------------------- */
+
+#kpiChannelEditor .kpi-channel-remove,
+#kpiChannelEditor_settings .kpi-channel-remove {
+  width: auto !important;
+  min-height: 40px !important;
+  height: 40px;
+  padding: 0 14px !important;
+  margin: 0 !important;
+
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--kpi-text);
+
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+
+  box-shadow: none;
+  transition: all 0.15s ease;
+
+  cursor: pointer;
+}
+
+#kpiChannelEditor .kpi-channel-remove:hover,
+#kpiChannelEditor_settings .kpi-channel-remove:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* -------------------------
+   ADD CHANNEL BUTTON spacing
+------------------------- */
+
+#kpiAddChannel,
+#kpiAddChannel_settings {
+  margin-top: 12px !important;
+}
