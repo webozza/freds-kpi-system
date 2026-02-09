@@ -47,6 +47,39 @@
   var leadsRows = [];
   var salesRows = [];
   var activityMeta = {};
+  var autosaveQueue = [];
+  var autosaveTimer = null;
+
+  // ---------- autosave (debounced patch) ----------
+  function queueAutosaveChange(date, key, value) {
+    autosaveQueue.push({ date: date, key: key, value: value });
+    scheduleAutosaveFlush();
+  }
+
+  function scheduleAutosaveFlush() {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(flushAutosave, 800); // debounce: 0.8s after last edit
+  }
+
+  function flushAutosave() {
+    if (!autosaveQueue.length) return;
+
+    // send and clear queue
+    var payload = { changes: autosaveQueue.slice(0) };
+    autosaveQueue = [];
+
+    $.post(kpiFront.ajaxUrl, {
+      action: "kpi_autosave_patch",
+      nonce: kpiFront.nonce,
+      patch: JSON.stringify(payload),
+    }).fail(function (xhr) {
+      // if it fails, put changes back so we don't lose them
+      try {
+        var back = payload.changes || [];
+        autosaveQueue = back.concat(autosaveQueue);
+      } catch (e) {}
+    });
+  }
 
   // ---------- KPI card recalcs ----------
   function recalcAllCards() {
@@ -140,7 +173,7 @@
     var totalRowIndex = hasTotalRow ? rows.length : -1;
 
     // build columns
-    var colHeaders = ["Metric"];
+    var colHeaders = ["Day"];
     for (var d = 1; d <= daysInMonth; d++) colHeaders.push(String(d));
     colHeaders.push("TOTAL");
 
@@ -284,6 +317,36 @@
         });
 
         recalcAllCards();
+
+        // ----- autosave patch for edited cells -----
+        var ym = activityMeta.ym || (kpiFront?.todayYm ?? "");
+        var y = parseInt(ym.slice(0, 4), 10);
+        var mm = parseInt(ym.slice(5, 7), 10);
+
+        changes.forEach(function (c) {
+          var row = c[0];
+          var col = c[1];
+
+          // only real day cells (1..daysInMonth)
+          if (col < 1 || col > daysInMonth) return;
+
+          // ignore total row in leads table
+          if (hasTotalRow && row === totalRowIndex) return;
+
+          var day = col;
+          var date =
+            y +
+            "-" +
+            String(mm).padStart(2, "0") +
+            "-" +
+            String(day).padStart(2, "0");
+
+          var key = rows[row] && rows[row].key ? rows[row].key : null;
+          if (!key) return;
+
+          var value = hot.getDataAtCell(row, col);
+          queueAutosaveChange(date, key, value);
+        });
       },
     });
 
@@ -401,23 +464,35 @@
       return "";
     });
 
-    var monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    var colHeaders = ["Metric"];
-    for (var i = 0; i < 12; i++)
-      colHeaders.push(monthNames[i] + "-" + yearShort);
+    var colHeaders = ["Month"];
+
+    if (meta.monthLabels && meta.monthLabels.length === 12) {
+      for (var i = 0; i < 12; i++) colHeaders.push(meta.monthLabels[i]);
+    } else {
+      var monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      var yearShort =
+        meta.yearShort ||
+        String(meta.year || new Date().getFullYear()).slice(-2);
+      for (var i = 0; i < 12; i++)
+        colHeaders.push(monthNames[i] + "-" + yearShort);
+    }
+
+    colHeaders.push("Year to Date");
+    colHeaders.push("Averages");
+
     colHeaders.push("Year to Date");
     colHeaders.push("Averages");
 
