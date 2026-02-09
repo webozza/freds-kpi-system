@@ -44,12 +44,17 @@ class KPI_Frontend {
     wp_enqueue_style('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.css', [], KPI_CALC_VERSION);
     wp_enqueue_script('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.js', ['jquery', 'kpi-handsontable'], KPI_CALC_VERSION, true);
 
+    $user_id = get_current_user_id();
+    $cycle = $user_id ? self::get_year_cycle_settings($user_id) : ['mode'=>'calendar','fyStart'=>1];
+
     wp_localize_script('kpi-calc-frontend', 'kpiFront', [
       'ajaxUrl' => admin_url('admin-post.php'),
       'currencySymbol' => '$',
       'moneyDecimals' => 2,
       'percentDecimals' => 2,
       'todayYm' => date('Y-m'),
+      'yearMode' => $cycle['mode'],
+      'fyStartMonth' => (int)$cycle['fyStart'],
     ]);
   }
 
@@ -83,6 +88,16 @@ class KPI_Frontend {
     return (bool) get_user_meta((int)$user_id, 'kpi_setup_done', true);
   }
 
+  private static function get_year_cycle_settings($user_id) {
+    $mode = get_user_meta((int)$user_id, 'kpi_year_mode', true);
+    $mode = in_array($mode, ['calendar','financial'], true) ? $mode : 'calendar';
+
+    $fyStart = (int) get_user_meta((int)$user_id, 'kpi_fy_start_month', true);
+    if ($fyStart < 1 || $fyStart > 12) $fyStart = 1; // default Jan
+
+    return ['mode' => $mode, 'fyStart' => $fyStart];
+  }
+
   public static function handle_save_user_setup() {
     if (!is_user_logged_in()) wp_die('Forbidden');
     if (!self::user_can_access()) wp_die('Forbidden');
@@ -97,6 +112,20 @@ class KPI_Frontend {
     if (!is_array($rows)) $rows = [];
 
     KPI_DB::save_channels($user_id, $rows);
+
+    // --- Save year cycle settings (if posted) ---
+    // (No redirects, no month changes — just save settings)
+    if (isset($_POST['kpi_year_mode'])) {
+      $mode = sanitize_key($_POST['kpi_year_mode']);
+      if (!in_array($mode, ['calendar','financial'], true)) $mode = 'calendar';
+      update_user_meta($user_id, 'kpi_year_mode', $mode);
+    }
+
+    if (isset($_POST['kpi_fy_start_month'])) {
+      $fyStart = (int) $_POST['kpi_fy_start_month'];
+      $fyStart = max(1, min(12, $fyStart));
+      update_user_meta($user_id, 'kpi_fy_start_month', $fyStart);
+    }
 
     // mark setup done
     update_user_meta($user_id, 'kpi_setup_done', 1);
@@ -269,6 +298,16 @@ class KPI_Frontend {
 
     $daysInMonth = (int)date('t', strtotime(sprintf('%04d-%02d-01', $year, $month)));
     $monthTitle = date('F Y', strtotime(sprintf('%04d-%02d-01', $year, $month)));
+
+    $cycle = self::get_year_cycle_settings($user_id);
+    $mode = $cycle['mode'];
+    $fyStart = (int)$cycle['fyStart'];
+
+    // In financial mode, the "Year" selector represents the FY start year for the current kpi_ym
+    $yearSelectValue = $year;
+    if ($mode === 'financial') {
+      $yearSelectValue = ($month < $fyStart) ? ($year - 1) : $year;
+    }
 
     // Channels (active only)
     $channels = KPI_DB::get_channels($user_id, true);
@@ -494,16 +533,34 @@ class KPI_Frontend {
                     $minYear = 2026;
                     $startYear = max($minYear, $currentYear);
                     for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
-                      <option value="<?php echo $y; ?>" <?php selected($year, $y); ?>><?php echo $y; ?></option>
+                      <option value="<?php echo $y; ?>" <?php selected($yearSelectValue, $y); ?>><?php echo $y; ?></option>
                     <?php endfor; ?>
                   </select>
                 </div>
                 <div class="kpi-select-control">
                   <label for="kpiMonthSelectActivity">Month</label>
                   <select id="kpiMonthSelectActivity" onchange="updateActivityUrl()">
-                    <?php for ($m = 1; $m <= 12; $m++): ?>
-                      <option value="<?php echo $m; ?>" <?php selected($month, $m); ?>><?php echo date('F', mktime(0, 0, 0, $m, 1)); ?></option>
-                    <?php endfor; ?>
+                    <?php
+                      if ($mode === 'financial') {
+                        // Show months in FY order (starting at FY start), but still select the real current $month
+                        for ($i=0; $i<12; $i++) {
+                          $m = (($fyStart - 1 + $i) % 12) + 1;
+                          ?>
+                          <option value="<?php echo $m; ?>" <?php selected($month, $m); ?>>
+                            <?php echo esc_html(date('F', mktime(0,0,0,$m,1))); ?>
+                          </option>
+                          <?php
+                        }
+                      } else {
+                        for ($m=1; $m<=12; $m++) {
+                          ?>
+                          <option value="<?php echo $m; ?>" <?php selected($month, $m); ?>>
+                            <?php echo esc_html(date('F', mktime(0,0,0,$m,1))); ?>
+                          </option>
+                          <?php
+                        }
+                      }
+                    ?>
                   </select>
                 </div>
               </div>
@@ -515,9 +572,19 @@ class KPI_Frontend {
               </button>
               <script>
                 function updateActivityUrl() {
-                  var y = document.getElementById('kpiYearSelectActivity').value;
-                  var m = document.getElementById('kpiMonthSelectActivity').value;
-                  var ym = y + '-' + String(m).padStart(2, '0');
+                  var y = parseInt(document.getElementById('kpiYearSelectActivity').value, 10);
+                  var m = parseInt(document.getElementById('kpiMonthSelectActivity').value, 10);
+
+                  var mode = (window.kpiFront && kpiFront.yearMode) ? kpiFront.yearMode : 'calendar';
+                  var fyStart = (window.kpiFront && kpiFront.fyStartMonth) ? parseInt(kpiFront.fyStartMonth, 10) : 1;
+
+                  // In financial mode, Year dropdown = FY start year.
+                  // Months before FY start belong to the next calendar year.
+                  var calYear = y;
+                  if (mode === 'financial' && m < fyStart) calYear = y + 1;
+
+                  var ym = calYear + '-' + String(m).padStart(2, '0');
+
                   var u = new URL(window.location.href);
                   u.searchParams.set('kpi_ym', ym);
                   u.searchParams.set('kpi_tab', 'activity');
@@ -651,6 +718,34 @@ class KPI_Frontend {
                   <?php wp_nonce_field('kpi_save_user_setup'); ?>
                   <input type="hidden" name="action" value="kpi_save_user_setup">
                   <input type="hidden" name="kpi_channels_json" id="kpi_channels_json_settings" value="">
+
+                  <?php $cycle = self::get_year_cycle_settings($user_id); ?>
+                  <div class="kpi-cycle-box" style="margin:0 0 16px;">
+                    <p class="kpi-drawer-hint" style="margin:0 0 10px;">Year cycle:</p>
+
+                    <label class="kpi-drawer-check" style="margin-bottom:8px;">
+                      <input type="radio" name="kpi_year_mode" value="calendar" <?php checked($cycle['mode'], 'calendar'); ?>>
+                      <span>Calendar year (Jan–Dec)</span>
+                    </label>
+
+                    <label class="kpi-drawer-check">
+                      <input type="radio" name="kpi_year_mode" value="financial" <?php checked($cycle['mode'], 'financial'); ?>>
+                      <span>Financial year</span>
+                    </label>
+
+                    <div id="kpiFyStartWrap" style="margin-top:10px; <?php echo $cycle['mode']==='financial' ? '' : 'display:none;'; ?>">
+                      <div class="kpi-drawer-field">
+                        <label>Financial year start month</label>
+                        <select name="kpi_fy_start_month" id="kpiFyStartSelect" style="width:100%;height:44px;border-radius:12px;">
+                          <?php for ($m=1; $m<=12; $m++): ?>
+                            <option value="<?php echo $m; ?>" <?php selected($cycle['fyStart'], $m); ?>>
+                              <?php echo esc_html(date('F', mktime(0,0,0,$m,1))); ?>
+                            </option>
+                          <?php endfor; ?>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
 
                   <p class="kpi-drawer-hint">Edit your channels (rename, enable/disable, add/remove):</p>
 

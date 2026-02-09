@@ -611,11 +611,30 @@
     );
   }
 
+  function initYearCycleToggle() {
+    var wrap = document.getElementById("kpiFyStartWrap");
+    if (!wrap) return;
+
+    function refresh() {
+      var fin = document.querySelector(
+        'input[name="kpi_year_mode"][value="financial"]',
+      );
+      wrap.style.display = fin && fin.checked ? "" : "none";
+    }
+
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.name === "kpi_year_mode") refresh();
+    });
+
+    refresh();
+  }
+
   // ---------- init ----------
   $(function () {
     initHotActivity();
     initHotMonthly();
     initSettingsDrawer();
     initChannelEditors();
+    initYearCycleToggle();
   });
 })(jQuery);
