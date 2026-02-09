@@ -136,7 +136,7 @@
     if (!container || !window.Handsontable) return null;
 
     var totalCol = daysInMonth + 1;
-    var hasTotalRow = true;
+    var hasTotalRow = !!isLeadsTable;
     var totalRowIndex = hasTotalRow ? rows.length : -1;
 
     // build columns
@@ -195,11 +195,6 @@
       td.classList.add("kpi-hot-total-row");
     }
 
-    function numRenderer(instance, td) {
-      Handsontable.renderers.NumericRenderer.apply(this, arguments);
-      td.classList.add("kpi-hot-num");
-    }
-
     function recalcRowTotal(hot, rowIndex) {
       var r = rows[rowIndex] || {};
       var sum = 0;
@@ -244,9 +239,20 @@
           return cp;
         }
 
+        var rMeta = rows[row] || {};
+
+        // Money rows: keep .00 + commas
+        if (rMeta.type === "money") {
+          cp.type = "numeric";
+          cp.numericFormat = { pattern: "0,0.00" }; // commas + 2 decimals
+          cp.renderer = Handsontable.renderers.NumericRenderer;
+          return cp;
+        }
+
+        // Int rows: no decimals (and optional commas)
         cp.type = "numeric";
-        cp.numericFormat = { pattern: "0.[00]" };
-        cp.renderer = numRenderer;
+        cp.numericFormat = { pattern: "0,0" }; // commas, no decimals (e.g. 1,234)
+        cp.renderer = Handsontable.renderers.NumericRenderer;
         return cp;
       },
 
