@@ -1951,3 +1951,7 @@
 #kpiAddChannel_settings {
   margin-top: 12px !important;
 }
+
+#kpiFyStartSelect option {
+  color: #fff;
+}
