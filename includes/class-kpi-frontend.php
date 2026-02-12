@@ -406,39 +406,41 @@ class KPI_Frontend {
     // --------------------
     // Monthly figures data (respect year cycle)
     // --------------------
-    $monthlyBaseYear = isset($_GET['kpi_year']) ? (int)$_GET['kpi_year'] : $yearSelectValue;
-
+    $monthlyBaseYear = isset($_GET['kpi_year']) ? (int)$_GET['kpi_year'] : $year;
     $minYear = 2026;
     $monthlyBaseYear = max($minYear, min(2100, $monthlyBaseYear));
 
     // Build monthlyPipeline/monthlyLeads as 1..12 (display order)
-    if ($mode === 'financial') {
+    // if ($mode === 'financial') {
 
-      // Pull two calendar years because FY spans across years
-      $pipeA  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-      $pipeB  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear + 1);
+    //   // Pull two calendar years because FY spans across years
+    //   $pipeA  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
+    //   $pipeB  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear + 1);
 
-      $leadsA = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
-      $leadsB = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear + 1);
+    //   $leadsA = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
+    //   $leadsB = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear + 1);
 
-      $monthlyPipeline = [];
-      $monthlyLeads    = [];
+    //   $monthlyPipeline = [];
+    //   $monthlyLeads    = [];
 
-      // i=1..12 are display columns in FY order starting at fyStart
-      for ($i = 1; $i <= 12; $i++) {
-        $offset  = $i - 1;
-        $m       = (($fyStart - 1 + $offset) % 12) + 1;          // calendar month number
-        $useNext = (($fyStart - 1 + $offset) >= 12);             // spills into next calendar year?
+    //   // i=1..12 are display columns in FY order starting at fyStart
+    //   for ($i = 1; $i <= 12; $i++) {
+    //     $offset  = $i - 1;
+    //     $m       = (($fyStart - 1 + $offset) % 12) + 1;          // calendar month number
+    //     $useNext = (($fyStart - 1 + $offset) >= 12);             // spills into next calendar year?
 
-        $monthlyPipeline[$i] = $useNext ? ($pipeB[$m] ?? []) : ($pipeA[$m] ?? []);
-        $monthlyLeads[$i]    = $useNext ? ($leadsB[$m] ?? []) : ($leadsA[$m] ?? []);
-      }
+    //     $monthlyPipeline[$i] = $useNext ? ($pipeB[$m] ?? []) : ($pipeA[$m] ?? []);
+    //     $monthlyLeads[$i]    = $useNext ? ($leadsB[$m] ?? []) : ($leadsA[$m] ?? []);
+    //   }
 
-    } else {
-      // Calendar year: Jan..Dec normal
-      $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-      $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
-    }
+    // } else {
+    //   // Calendar year: Jan..Dec normal
+    //   $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
+    //   $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
+    // }
+
+    $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
+    $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
 
     // (active months not used in your monthly calc right now, but keep it)
     $active = self::get_active_months_user($user_id, $monthlyBaseYear);
@@ -626,7 +628,7 @@ class KPI_Frontend {
 
                   // calendar year for the month we picked
                   var calYear = y;
-                  if (mode === "financial" && m < fyStart) calYear = y + 1;
+                  // if (mode === "financial" && m < fyStart) calYear = y + 1;
 
                   var ym = calYear + "-" + String(m).padStart(2, "0");
 
@@ -671,7 +673,7 @@ class KPI_Frontend {
 
                   // set the calendar year for kpi_ym
                   var calYear = y;
-                  if (mode === "financial" && m < fyStart) calYear = y + 1;
+                  // if (mode === "financial" && m < fyStart) calYear = y + 1;
 
                   var ym = calYear + "-" + String(m).padStart(2, "0");
 
@@ -849,7 +851,7 @@ class KPI_Frontend {
             <div class="kpi-card kpi-card--glass">
               <div class="kpi-hot-head">
                 <div>
-                  <h3>Monthly figures — <?php echo esc_html($year); ?></h3>
+                  <h3>Monthly figures — <?php echo esc_html($monthlyBaseYear); ?></h3>
                   <p class="kpi-muted">View your yearly KPI breakdown by month.</p>
                 </div>
               </div>
@@ -857,24 +859,9 @@ class KPI_Frontend {
               <div id="kpiHotMonthly" class="kpi-hot kpi-hot--monthly"></div>
 
               <script type="application/json" id="kpi_monthly_grid"><?php echo wp_json_encode($monthlyGrid); ?></script>
-              <?php
-              $monthLabels = [];
-              for ($i = 0; $i < 12; $i++) {
-                if ($mode === 'financial') {
-                  $m = (($fyStart - 1 + $i) % 12) + 1;
-                  $y = $monthlyBaseYear + ((($fyStart - 1 + $i) >= 12) ? 1 : 0);
-                } else {
-                  $m = $i + 1;
-                  $y = $monthlyBaseYear;
-                }
-                $monthLabels[] = date('M', mktime(0,0,0,$m,1)) . '-' . substr((string)$y, -2);
-              }
-              ?>
               <script type="application/json" id="kpi_monthly_meta"><?php echo wp_json_encode([
                 'year' => $monthlyBaseYear,
-                'mode' => $mode,
-                'fyStart' => $fyStart,
-                'monthLabels' => $monthLabels
+                'yearShort' => substr((string)$monthlyBaseYear, -2),
               ]); ?></script>
             </div>
           <?php endif; ?>
