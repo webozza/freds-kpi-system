@@ -1710,8 +1710,9 @@
    CHANNEL EDITOR (Setup + Settings) — Scoped + Non-overridable
    REQUIREMENT:
    - Setup (#kpiChannelEditor) = 2 columns desktop, 1 column mobile
-   - Settings (#kpiChannelEditor_settings) = ALWAYS 1 column
-   - Every selector MUST start with #kpiChannelEditor or #kpiChannelEditor_settings
+   - Settings (#kpiChannelEditor_global) = ALWAYS 1 column,
+#kpiChannelEditor_period) = ALWAYS 1 column
+   - Every selector MUST start with #kpiChannelEditor or #kpiChannelEditor_global / #kpiChannelEditor_period
 ========================================================= */
 
 /* -------------------------
@@ -1735,7 +1736,8 @@
 }
 
 /* Settings editor: ALWAYS 1 column */
-#kpiChannelEditor_settings.kpi-channel-editor {
+#kpiChannelEditor_global.kpi-channel-editor ,
+#kpiChannelEditor_period.kpi-channel-editor {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -1747,7 +1749,8 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-row,
-#kpiChannelEditor_settings .kpi-channel-row {
+#kpiChannelEditor_global .kpi-channel-row ,
+#kpiChannelEditor_period .kpi-channel-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -1772,7 +1775,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-row:hover,
-#kpiChannelEditor_settings .kpi-channel-row:hover {
+#kpiChannelEditor_global .kpi-channel-row:hover ,
+#kpiChannelEditor_period .kpi-channel-row:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.16);
   background:
@@ -1789,7 +1793,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-row:focus-within,
-#kpiChannelEditor_settings .kpi-channel-row:focus-within {
+#kpiChannelEditor_global .kpi-channel-row:focus-within ,
+#kpiChannelEditor_period .kpi-channel-row:focus-within {
   border-color: rgba(102, 240, 194, 0.35);
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.32),
@@ -1798,7 +1803,8 @@
 
 /* Active glow */
 #kpiChannelEditor .kpi-channel-row:has(.kpi-channel-active:checked),
-#kpiChannelEditor_settings .kpi-channel-row:has(.kpi-channel-active:checked) {
+#kpiChannelEditor_global .kpi-channel-row:has(.kpi-channel-active:checked) ,
+#kpiChannelEditor_period .kpi-channel-row:has(.kpi-channel-active:checked) {
   border-color: rgba(102, 240, 194, 0.28);
   background:
     radial-gradient(
@@ -1818,7 +1824,8 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-active,
-#kpiChannelEditor_settings .kpi-channel-active {
+#kpiChannelEditor_global .kpi-channel-active ,
+#kpiChannelEditor_period .kpi-channel-active {
   appearance: none;
   -webkit-appearance: none;
 
@@ -1843,7 +1850,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-active::after,
-#kpiChannelEditor_settings .kpi-channel-active::after {
+#kpiChannelEditor_global .kpi-channel-active::after ,
+#kpiChannelEditor_period .kpi-channel-active::after {
   content: "";
   width: 9px;
   height: 5px;
@@ -1857,7 +1865,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-active:checked,
-#kpiChannelEditor_settings .kpi-channel-active:checked {
+#kpiChannelEditor_global .kpi-channel-active:checked ,
+#kpiChannelEditor_period .kpi-channel-active:checked {
   background: linear-gradient(
     180deg,
     var(--kpi-accent),
@@ -1868,7 +1877,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-active:checked::after,
-#kpiChannelEditor_settings .kpi-channel-active:checked::after {
+#kpiChannelEditor_global .kpi-channel-active:checked::after ,
+#kpiChannelEditor_period .kpi-channel-active:checked::after {
   opacity: 1;
   transform: rotate(-45deg) scale(1);
 }
@@ -1878,7 +1888,8 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-name,
-#kpiChannelEditor_settings .kpi-channel-name {
+#kpiChannelEditor_global .kpi-channel-name ,
+#kpiChannelEditor_period .kpi-channel-name {
   flex: 1;
   height: 44px;
   padding: 0 12px;
@@ -1897,12 +1908,14 @@
 }
 
 #kpiChannelEditor .kpi-channel-name::placeholder,
-#kpiChannelEditor_settings .kpi-channel-name::placeholder {
+#kpiChannelEditor_global .kpi-channel-name::placeholder ,
+#kpiChannelEditor_period .kpi-channel-name::placeholder {
   color: rgba(255, 255, 255, 0.45);
 }
 
 #kpiChannelEditor .kpi-channel-name:focus,
-#kpiChannelEditor_settings .kpi-channel-name:focus {
+#kpiChannelEditor_global .kpi-channel-name:focus ,
+#kpiChannelEditor_period .kpi-channel-name:focus {
   border-color: rgba(102, 240, 194, 0.55);
   box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
   background: rgba(255, 255, 255, 0.05);
@@ -1914,7 +1927,8 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-remove,
-#kpiChannelEditor_settings .kpi-channel-remove {
+#kpiChannelEditor_global .kpi-channel-remove ,
+#kpiChannelEditor_period .kpi-channel-remove {
   width: auto !important;
   min-height: 40px !important;
   height: 40px;
@@ -1938,7 +1952,8 @@
 }
 
 #kpiChannelEditor .kpi-channel-remove:hover,
-#kpiChannelEditor_settings .kpi-channel-remove:hover {
+#kpiChannelEditor_global .kpi-channel-remove:hover ,
+#kpiChannelEditor_period .kpi-channel-remove:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }

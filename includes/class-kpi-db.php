@@ -294,6 +294,18 @@ class KPI_DB {
     $user_id = (int)$user_id;
     $period_val = ($period !== null) ? sanitize_text_field($period) : null;
 
+    // For period-specific saves: load IDs that already belong to this period.
+    // Any IDs from global channels must be treated as new inserts (not updates),
+    // otherwise editing the period tab would silently modify global records.
+    $period_owned_ids = [];
+    if ($period_val !== null) {
+      $results = $wpdb->get_col($wpdb->prepare(
+        "SELECT id FROM $t WHERE user_id=%d AND period=%s",
+        $user_id, $period_val
+      ));
+      $period_owned_ids = array_map('intval', (array)$results);
+    }
+
     $keep_ids = [];
     $order = 0;
 
@@ -303,6 +315,12 @@ class KPI_DB {
 
       $is_active = !empty($r['is_active']) ? 1 : 0;
       $id = isset($r['id']) ? (int)$r['id'] : 0;
+
+      // When saving period-specific: only reuse IDs owned by this period.
+      // Global channel IDs must become new period-specific inserts.
+      if ($period_val !== null && $id > 0 && !in_array($id, $period_owned_ids)) {
+        $id = 0;
+      }
 
       if ($id > 0) {
         $keep_ids[] = $id;
