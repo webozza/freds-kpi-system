@@ -1955,3 +1955,471 @@
 #kpiFyStartSelect option {
   color: #000;
 }
+
+/* ==========================================================
+   ISSUE 1 — Per-period Channel Prompt Banner
+========================================================== */
+
+.kpi-period-banner {
+  margin: 0 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(102, 240, 194, 0.28);
+  background:
+    radial-gradient(800px 160px at 0% 0%, rgba(102,240,194,0.1), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  padding: 14px 16px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.kpi-period-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.kpi-period-banner-text {
+  flex: 1;
+  color: rgba(255,255,255,0.8);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.kpi-period-banner-text strong {
+  color: var(--kpi-accent);
+}
+
+.kpi-period-banner-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kpi-banner-btn {
+  appearance: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 8px 14px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.kpi-banner-btn--primary {
+  background: linear-gradient(180deg, var(--kpi-accent), rgba(102,240,194,0.82));
+  color: rgba(11,18,32,0.95);
+  border: none;
+  box-shadow: 0 6px 18px rgba(102,240,194,0.18);
+}
+
+.kpi-banner-btn--primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.kpi-banner-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kpi-banner-btn--ghost {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: var(--kpi-text);
+}
+
+.kpi-banner-btn--ghost:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.kpi-banner-btn--dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.kpi-banner-btn--dismiss:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+}
+
+.kpi-drawer-hint-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(138,166,255,0.18);
+  border: 1px solid rgba(138,166,255,0.3);
+  color: var(--kpi-accent2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+  .kpi-period-banner-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kpi-period-banner-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ==========================================================
+   ISSUE 2 — FY View Toggle (Monthly tab)
+========================================================== */
+
+.kpi-fy-toggle-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.kpi-fy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s ease;
+}
+
+.kpi-fy-toggle:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.kpi-fy-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.kpi-fy-toggle-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kpi-fy-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.5);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.kpi-fy-toggle input[type="checkbox"]:checked ~ .kpi-fy-toggle-track {
+  background: linear-gradient(135deg, var(--kpi-accent), rgba(102,240,194,0.75));
+  border-color: var(--kpi-accent);
+}
+
+.kpi-fy-toggle input[type="checkbox"]:checked ~ .kpi-fy-toggle-track::after {
+  transform: translateX(16px);
+  background: rgba(11,18,32,0.9);
+}
+
+.kpi-fy-toggle-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--kpi-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+.kpi-fy-toggle-label em {
+  font-style: normal;
+  color: var(--kpi-accent);
+  margin-left: 4px;
+}
+
+/* ==========================================================
+   ISSUE 3 — Charts Tab
+========================================================== */
+
+.kpi-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kpi-chart-card {
+  background:
+    radial-gradient(600px 200px at 10% 0%, rgba(102,240,194,0.08), transparent 60%),
+    radial-gradient(600px 200px at 90% 10%, rgba(138,166,255,0.08), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 18px 18px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-chart-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+
+.kpi-chart-card h4 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.88);
+}
+
+/* Full-width card (revenue chart spans both columns) */
+.kpi-chart-card--full {
+  grid-column: 1 / -1;
+}
+
+.kpi-chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Donut chart: constrain height */
+.kpi-chart-card:not(.kpi-chart-card--full) .kpi-chart-wrap {
+  max-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Revenue chart: taller */
+.kpi-chart-card--full .kpi-chart-wrap {
+  max-height: 280px;
+}
+
+.kpi-chart-wrap canvas {
+  max-height: 100% !important;
+}
+
+@media (max-width: 860px) {
+  .kpi-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpi-chart-card--full {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-chart-card {
+    padding: 14px 14px 12px;
+  }
+}
+
+/* =========================================================
+   UX v2: Drawer Tabs
+========================================================= */
+.kpi-dtabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.kpi-dtab {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.kpi-dtab.is-active {
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+}
+
+.kpi-dtab:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.kpi-dtab-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  background: #66f0c2;
+  color: #0b1220;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+
+/* =========================================================
+   UX v2: Delete Confirmation Modal
+========================================================= */
+.kpi-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-modal-backdrop.is-visible {
+  display: flex;
+}
+
+.kpi-modal-box {
+  background: #111b31;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  max-width: 440px;
+  width: calc(100% - 32px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.65);
+}
+
+.kpi-modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 10px;
+}
+
+.kpi-modal-body {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.kpi-modal-body strong {
+  color: #fff;
+}
+
+.kpi-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.kpi-btn--danger {
+  background: #c53030;
+  color: #fff;
+  border: none;
+}
+
+.kpi-btn--danger:hover {
+  background: #9b2c2c;
+}
+
+/* =========================================================
+   UX v2: Auto-save Status Indicator
+========================================================= */
+.kpi-autosave-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.kpi-autosave-status:not(:empty) {
+  opacity: 1;
+}
+
+.kpi-autosave-status--saving {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.kpi-autosave-status--saved {
+  color: #66f0c2;
+}
+
+.kpi-autosave-status--error {
+  color: #ff6b6b;
+}
+
+/* =========================================================
+   UX v2: Tooltips
+========================================================= */
+[data-kpi-tip] {
+  position: relative;
+}
+
+[data-kpi-tip]::after {
+  content: attr(data-kpi-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a2845;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: normal;
+  max-width: 240px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 200;
+}
+
+[data-kpi-tip]:hover::after {
+  opacity: 1;
+}
+

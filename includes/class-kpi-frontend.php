@@ -19,6 +19,10 @@ class KPI_Frontend {
 
     add_action('wp_ajax_kpi_autosave_patch', [__CLASS__, 'handle_autosave_patch']);
     add_action('wp_ajax_nopriv_kpi_autosave_patch', [__CLASS__, 'forbid']);
+
+    // Per-period channel copy (Issue 1)
+    add_action('wp_ajax_kpi_copy_period_channels', [__CLASS__, 'handle_copy_period_channels']);
+    add_action('wp_ajax_nopriv_kpi_copy_period_channels', [__CLASS__, 'forbid']);
   }
 
   public static function enqueue() {
@@ -43,22 +47,32 @@ class KPI_Frontend {
       true
     );
 
+    // --- Vendor: Chart.js (local) ---
+    wp_enqueue_script(
+      'kpi-chartjs',
+      KPI_CALC_URL . 'assets/vendor/chart.min.js',
+      [],
+      '4.4.7',
+      true
+    );
+
     // --- Our UI ---
     wp_enqueue_style('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.css', [], KPI_CALC_VERSION);
-    wp_enqueue_script('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.js', ['jquery', 'kpi-handsontable'], KPI_CALC_VERSION, true);
+    wp_enqueue_script('kpi-calc-frontend', KPI_CALC_URL . 'assets/frontend.js', ['jquery', 'kpi-handsontable', 'kpi-chartjs'], KPI_CALC_VERSION, true);
 
     $user_id = get_current_user_id();
     $cycle = $user_id ? self::get_year_cycle_settings($user_id) : ['mode'=>'calendar','fyStart'=>1];
 
     wp_localize_script('kpi-calc-frontend', 'kpiFront', [
-      'ajaxUrl' => admin_url('admin-ajax.php'),
-      'nonce'   => wp_create_nonce('kpi_autosave'),
+      'ajaxUrl'        => admin_url('admin-ajax.php'),
+      'nonce'          => wp_create_nonce('kpi_autosave'),
+      'nonceCopy'      => wp_create_nonce('kpi_copy_period_channels'),
       'currencySymbol' => '$',
-      'moneyDecimals' => 2,
-      'percentDecimals' => 2,
-      'todayYm' => date('Y-m'),
-      'yearMode' => $cycle['mode'],
-      'fyStartMonth' => (int)$cycle['fyStart'],
+      'moneyDecimals'  => 2,
+      'percentDecimals'=> 2,
+      'todayYm'        => date('Y-m'),
+      'yearMode'       => $cycle['mode'],
+      'fyStartMonth'   => (int)$cycle['fyStart'],
     ]);
   }
 
@@ -110,15 +124,19 @@ class KPI_Frontend {
 
     $user_id = get_current_user_id();
 
+    // Which period are we saving to? (null = global, "YYYY-MM" = period-specific)
+    $kpi_period = isset($_POST['kpi_period']) ? sanitize_text_field(wp_unslash($_POST['kpi_period'])) : null;
+    // Empty string or invalid format → treat as global (null)
+    if (!$kpi_period || !preg_match('/^\d{4}-\d{2}$/', $kpi_period)) $kpi_period = null;
+
     // Expect JSON payload from JS (channel editor)
     $raw = isset($_POST['kpi_channels_json']) ? wp_unslash($_POST['kpi_channels_json']) : '[]';
     $rows = json_decode($raw, true);
     if (!is_array($rows)) $rows = [];
 
-    KPI_DB::save_channels($user_id, $rows);
+    KPI_DB::save_channels($user_id, $rows, $kpi_period);
 
     // --- Save year cycle settings (if posted) ---
-    // (No redirects, no month changes — just save settings)
     if (isset($_POST['kpi_year_mode'])) {
       $mode = sanitize_key($_POST['kpi_year_mode']);
       if (!in_array($mode, ['calendar','financial'], true)) $mode = 'calendar';
@@ -136,6 +154,32 @@ class KPI_Frontend {
 
     wp_safe_redirect(wp_get_referer() ?: home_url('/'));
     exit;
+  }
+
+  // -----------------------
+  // AJAX: Copy period channels (Issue 1)
+  // -----------------------
+  public static function handle_copy_period_channels() {
+    if (!is_user_logged_in()) wp_send_json_error(['msg' => 'Forbidden'], 403);
+    if (!self::user_can_access()) wp_send_json_error(['msg' => 'Forbidden'], 403);
+
+    check_ajax_referer('kpi_copy_period_channels', 'nonce');
+
+    $user_id = get_current_user_id();
+
+    $from = isset($_POST['from_period']) ? sanitize_text_field(wp_unslash($_POST['from_period'])) : null;
+    $to   = isset($_POST['to_period'])   ? sanitize_text_field(wp_unslash($_POST['to_period']))   : '';
+
+    if (!preg_match('/^\d{4}-\d{2}$/', $to)) {
+      wp_send_json_error(['msg' => 'Invalid to_period'], 400);
+    }
+    if ($from && !preg_match('/^\d{4}-\d{2}$/', $from)) {
+      $from = null; // invalid from = use global
+    }
+
+    $newChannels = KPI_DB::copy_channels_to_period($user_id, $from ?: null, $to);
+
+    wp_send_json_success(['channels' => $newChannels, 'period' => $to]);
   }
 
   private static function render_channel_editor($channels, $formIdSuffix = '') {
@@ -269,7 +313,7 @@ class KPI_Frontend {
     // Ensure defaults exist for this user (safe no-op if already seeded)
     KPI_DB::ensure_default_channels($user_id);
 
-    // Show setup until user submits once (so they can rename/remove/add before seeing dashboard)
+    // Show setup until user submits once
     if (!self::setup_done($user_id)) {
       return self::render_setup_form($user_id);
     }
@@ -278,27 +322,24 @@ class KPI_Frontend {
   }
 
   // -----------------------
-  // Dashboard (Activity + Monthly)
+  // Dashboard (Activity + Monthly + Charts)
   // -----------------------
   private static function render_dashboard($user_id) {
     // tab
     $tab = isset($_GET['kpi_tab']) ? sanitize_key($_GET['kpi_tab']) : 'activity';
-    if (!in_array($tab, ['activity','monthly'], true)) $tab = 'activity';
+    if (!in_array($tab, ['activity','monthly','charts'], true)) $tab = 'activity';
 
     // ---- TAB-AWARE date selection ----
-    if ($tab === 'monthly') {
-      // Monthly tab should ONLY use kpi_year (ignore kpi_ym completely)
+    if ($tab === 'monthly' || $tab === 'charts') {
       $year = isset($_GET['kpi_year']) ? (int)$_GET['kpi_year'] : (int)date('Y');
-      $month = (int)date('n'); // not really used on monthly
-      $ym = sprintf('%04d-%02d', (int)date('Y'), (int)date('n')); // safe placeholder
+      $month = (int)date('n');
+      $ym = sprintf('%04d-%02d', (int)date('Y'), (int)date('n'));
     } else {
-      // Activity tab should prefer kpi_ym
       $ym = isset($_GET['kpi_ym']) ? sanitize_text_field($_GET['kpi_ym']) : '';
       if (preg_match('/^\d{4}-\d{2}$/', $ym)) {
         $year = (int)substr($ym, 0, 4);
         $month = (int)substr($ym, 5, 2);
       } else {
-        // fallback (if someone hits old URLs)
         $year = isset($_GET['kpi_year']) ? (int)$_GET['kpi_year'] : (int)date('Y');
         $month = isset($_GET['kpi_month']) ? (int)$_GET['kpi_month'] : (int)date('n');
         $ym = sprintf('%04d-%02d', $year, $month);
@@ -317,11 +358,26 @@ class KPI_Frontend {
     $mode = $cycle['mode'];
     $fyStart = (int)$cycle['fyStart'];
 
-    // In financial mode, the "Year" selector represents the FY start year for the current kpi_ym
     $yearSelectValue = $year;
 
-    // Channels (active only)
-    $channels = KPI_DB::get_channels($user_id, true);
+    // ---- CHANNELS for Activity tab (per-period support) ----
+    $channels = KPI_DB::get_channels_for_period($user_id, $ym, true);
+    $periodHasOwnChannels = KPI_DB::period_has_own_channels($user_id, $ym);
+
+    // Period prompt info for JS (Issue 1)
+    $periodInfo = null;
+    if ($tab === 'activity' && !$periodHasOwnChannels) {
+      $nearestPeriod = KPI_DB::get_nearest_period_with_channels($user_id, $ym);
+      $periodLabel = date('F Y', strtotime($ym . '-01'));
+      $nearestLabel = $nearestPeriod ? date('F Y', strtotime($nearestPeriod . '-01')) : null;
+      $periodInfo = [
+        'period'              => $ym,
+        'period_label'        => $periodLabel,
+        'has_own_channels'    => false,
+        'nearest_period'      => $nearestPeriod,
+        'nearest_period_label'=> $nearestLabel,
+      ];
+    }
 
     // Maps for lookup
     $channelIds = [];
@@ -332,8 +388,8 @@ class KPI_Frontend {
     $pipeTotals = KPI_DB::get_month_pipeline_totals($user_id, $year, $month);
 
     // Leads daily + totals (per channel)
-    $leadsByDate = KPI_DB::get_month_leads_map($user_id, $year, $month); // map[date][channel_id]=value
-    $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel($user_id, $year, $month); // [channel_id]=total
+    $leadsByDate = KPI_DB::get_month_leads_map($user_id, $year, $month);
+    $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel($user_id, $year, $month);
 
     // compute totals/stats
     $leadTotal = 0;
@@ -404,62 +460,74 @@ class KPI_Frontend {
     }
 
     // --------------------
-    // Monthly figures data (respect year cycle)
+    // Monthly figures data (Issue 2: respect FY cycle)
     // --------------------
     $monthlyBaseYear = isset($_GET['kpi_year']) ? (int)$_GET['kpi_year'] : $year;
-    $minYear = 2026;
     $monthlyBaseYear = max($minYear, min(2100, $monthlyBaseYear));
 
-    // Build monthlyPipeline/monthlyLeads as 1..12 (display order)
-    // if ($mode === 'financial') {
+    // Issue 2: FY view toggle (defaults ON when in financial mode)
+    $fyViewEnabled = ($mode === 'financial') &&
+      (!isset($_GET['kpi_fy_view']) || (int)$_GET['kpi_fy_view'] !== 0);
 
-    //   // Pull two calendar years because FY spans across years
-    //   $pipeA  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-    //   $pipeB  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear + 1);
+    // Build monthly data with FY support
+    $fyMonthLabels = [];
 
-    //   $leadsA = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
-    //   $leadsB = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear + 1);
+    if ($fyViewEnabled) {
+      // Pull two calendar years because FY can span across years
+      $pipeA  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
+      $pipeB  = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear + 1);
 
-    //   $monthlyPipeline = [];
-    //   $monthlyLeads    = [];
+      $leadsA = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear);
+      $leadsB = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear + 1);
 
-    //   // i=1..12 are display columns in FY order starting at fyStart
-    //   for ($i = 1; $i <= 12; $i++) {
-    //     $offset  = $i - 1;
-    //     $m       = (($fyStart - 1 + $offset) % 12) + 1;          // calendar month number
-    //     $useNext = (($fyStart - 1 + $offset) >= 12);             // spills into next calendar year?
+      $monthlyPipeline = [];
+      $monthlyLeads    = [];
 
-    //     $monthlyPipeline[$i] = $useNext ? ($pipeB[$m] ?? []) : ($pipeA[$m] ?? []);
-    //     $monthlyLeads[$i]    = $useNext ? ($leadsB[$m] ?? []) : ($leadsA[$m] ?? []);
-    //   }
+      // i=1..12 are display columns in FY order starting at fyStart
+      for ($i = 1; $i <= 12; $i++) {
+        $offset  = $i - 1;
+        $m       = (($fyStart - 1 + $offset) % 12) + 1; // calendar month number
+        $useNext = (($fyStart - 1 + $offset) >= 12);    // spills into next calendar year?
 
-    // } else {
-    //   // Calendar year: Jan..Dec normal
-    //   $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-    //   $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
-    // }
+        $monthlyPipeline[$i] = $useNext ? ($pipeB[$m] ?? []) : ($pipeA[$m] ?? []);
+        $monthlyLeads[$i]    = $useNext ? ($leadsB[$m] ?? []) : ($leadsA[$m] ?? []);
 
-    $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-    $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals($user_id, $monthlyBaseYear);
+        $calYear = $useNext ? ($monthlyBaseYear + 1) : $monthlyBaseYear;
+        $fyMonthLabels[] = date('M', mktime(0,0,0,$m,1)) . '-' . substr((string)$calYear, -2);
+      }
 
-    // (active months not used in your monthly calc right now, but keep it)
+      // Channel names from both years
+      $namesA = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear);
+      $namesB = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear + 1);
+      $monthlyChannelNames = array_values(array_unique(array_merge($namesA, $namesB)));
+
+    } else {
+      // Calendar year: Jan..Dec
+      $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
+      $monthlyLeads    = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear);
+      $monthlyChannelNames = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear);
+
+      $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      $ys = substr((string)$monthlyBaseYear, -2);
+      foreach ($monthNames as $mn) $fyMonthLabels[] = $mn . '-' . $ys;
+    }
+
     $active = self::get_active_months_user($user_id, $monthlyBaseYear);
 
-    // Build monthly grid rows
+    // Build monthly grid rows (name-based, Issue 1+2)
     $monthlyGrid = [];
 
     // Section header: Lead Data Totals
     $monthlyGrid[] = self::build_section_header('Lead Data Totals');
 
-    foreach ($channels as $c) {
-      $cid = (int)$c['id'];
+    foreach ($monthlyChannelNames as $chName) {
       $monthlyGrid[] = self::build_monthly_row(
-        $c['name'],
+        $chName,
         'int',
         $monthlyLeads,
         $active,
-        function($m) use ($cid) {
-          return (float)($m[$cid] ?? 0);
+        function($m) use ($chName) {
+          return (float)($m[$chName] ?? 0);
         }
       );
     }
@@ -469,9 +537,9 @@ class KPI_Frontend {
       'int',
       $monthlyLeads,
       $active,
-      function($m) use ($channelIds) {
+      function($m) use ($monthlyChannelNames) {
         $sum = 0;
-        foreach ($channelIds as $cid) $sum += (float)($m[$cid] ?? 0);
+        foreach ($monthlyChannelNames as $n) $sum += (float)($m[$n] ?? 0);
         return $sum;
       },
       'total'
@@ -503,16 +571,8 @@ class KPI_Frontend {
 
     $monthlyGrid[] = self::build_empty_row();
 
-    $monthlyGrid[] = self::build_monthly_row('Calls from Leads', 'pct', $monthlyPipeline, $active, function($m) use ($monthlyLeads, $channelIds){
-      // NOTE: $m here is pipeline month; need leads for same month in build_monthly_row loop
-      return 0; // overwritten below (we don't have month index inside getter)
-    });
-
-    // Replace the 7 ratio rows with versions that can see month index:
-    array_pop($monthlyGrid); // remove placeholder we pushed above
-
-    $monthlyGrid[] = self::build_monthly_row_with_month_index('Calls from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
-      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Calls from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $monthlyChannelNames){
+      $leads=0; foreach($monthlyChannelNames as $n) $leads += (float)($monthlyLeads[$month][$n] ?? 0);
       $calls=(float)($monthlyPipeline[$month]['calls'] ?? 0);
       return $leads>0 ? $calls/$leads : 0;
     });
@@ -523,8 +583,8 @@ class KPI_Frontend {
       return $calls>0 ? $apps/$calls : 0;
     });
 
-    $monthlyGrid[] = self::build_monthly_row_with_month_index('Appointments from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
-      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Appointments from Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $monthlyChannelNames){
+      $leads=0; foreach($monthlyChannelNames as $n) $leads += (float)($monthlyLeads[$month][$n] ?? 0);
       $apps=(float)($monthlyPipeline[$month]['appointments'] ?? 0);
       return $leads>0 ? $apps/$leads : 0;
     });
@@ -547,17 +607,66 @@ class KPI_Frontend {
       return $calls>0 ? $s/$calls : 0;
     });
 
-    $monthlyGrid[] = self::build_monthly_row_with_month_index('Sales From Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $channelIds){
-      $leads=0; foreach($channelIds as $cid) $leads += (float)($monthlyLeads[$month][$cid] ?? 0);
+    $monthlyGrid[] = self::build_monthly_row_with_month_index('Sales From Leads', 'pct', $active, function($month) use ($monthlyLeads, $monthlyPipeline, $monthlyChannelNames){
+      $leads=0; foreach($monthlyChannelNames as $n) $leads += (float)($monthlyLeads[$month][$n] ?? 0);
       $s=(float)($monthlyPipeline[$month]['sales'] ?? 0);
       return $leads>0 ? $s/$leads : 0;
     });
 
-    // Lead totals by channel for summary cards
+    // Lead totals by key for summary cards
     $leadTotalsByKey = [];
     foreach ($channels as $c) {
       $cid = (int)$c['id'];
       $leadTotalsByKey['lead_' . $cid] = (int)($leadsTotalsByChannel[$cid] ?? 0);
+    }
+
+    // --------------------
+    // Chart data (Issue 3)
+    // --------------------
+    $chartYear = ($tab === 'charts') ? $year : $monthlyBaseYear;
+
+    // Leads by channel for the year (use FY-resolved data for chart too)
+    $chartLeadsAll = [];
+    for ($m=1; $m<=12; $m++) {
+      foreach ($monthlyLeads[$m] as $chName => $total) {
+        $chartLeadsAll[$chName] = ($chartLeadsAll[$chName] ?? 0) + (int)$total;
+      }
+    }
+    arsort($chartLeadsAll);
+
+    $chartData = [
+      'leadsByChannel' => [
+        'labels' => array_keys($chartLeadsAll),
+        'values' => array_values($chartLeadsAll),
+      ],
+      'monthlyPipeline' => [
+        'months'       => $fyMonthLabels,
+        'calls'        => [],
+        'appointments' => [],
+        'quotes'       => [],
+        'sales'        => [],
+      ],
+      'monthlyRevenue' => [
+        'months'     => $fyMonthLabels,
+        'quoteValue' => [],
+        'salesValue' => [],
+      ],
+    ];
+
+    for ($i=1; $i<=12; $i++) {
+      $chartData['monthlyPipeline']['calls'][]        = (int)($monthlyPipeline[$i]['calls'] ?? 0);
+      $chartData['monthlyPipeline']['appointments'][] = (int)($monthlyPipeline[$i]['appointments'] ?? 0);
+      $chartData['monthlyPipeline']['quotes'][]       = (int)($monthlyPipeline[$i]['quotes'] ?? 0);
+      $chartData['monthlyPipeline']['sales'][]        = (int)($monthlyPipeline[$i]['sales'] ?? 0);
+      $chartData['monthlyRevenue']['quoteValue'][]    = (float)($monthlyPipeline[$i]['quote_value'] ?? 0);
+      $chartData['monthlyRevenue']['salesValue'][]    = (float)($monthlyPipeline[$i]['sales_value'] ?? 0);
+    }
+
+    // FY label for display
+    $fyLabel = '';
+    if ($fyViewEnabled) {
+      $fyEndYear = ($fyStart === 1) ? $monthlyBaseYear : $monthlyBaseYear + 1;
+      $fyLabel = 'FY ' . $monthlyBaseYear . '–' . substr((string)$fyEndYear, -2);
     }
 
     ob_start(); ?>
@@ -578,7 +687,6 @@ class KPI_Frontend {
                   <select id="kpiYearSelectActivity" onchange="updateActivityUrl()">
                     <?php
                     $currentYear = (int)date('Y');
-                    $minYear = 2026;
                     $startYear = max($minYear, $currentYear);
                     for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                       <option value="<?php echo $y; ?>" <?php selected($yearSelectValue, $y); ?>><?php echo $y; ?></option>
@@ -590,7 +698,6 @@ class KPI_Frontend {
                   <select id="kpiMonthSelectActivity" onchange="updateActivityUrl()">
                     <?php
                       if ($mode === 'financial') {
-                        // Show months in FY order (starting at FY start), but still select the real current $month
                         for ($i=0; $i<12; $i++) {
                           $m = (($fyStart - 1 + $i) % 12) + 1;
                           ?>
@@ -622,82 +729,105 @@ class KPI_Frontend {
                 function updateActivityUrl() {
                   var y = parseInt(document.getElementById("kpiYearSelectActivity").value, 10);
                   var m = parseInt(document.getElementById("kpiMonthSelectActivity").value, 10);
-
-                  var mode = (window.kpiFront && kpiFront.yearMode) ? kpiFront.yearMode : "calendar";
-                  var fyStart = (window.kpiFront && kpiFront.fyStartMonth) ? parseInt(kpiFront.fyStartMonth, 10) : 1;
-
-                  // calendar year for the month we picked
-                  var calYear = y;
-                  // if (mode === "financial" && m < fyStart) calYear = y + 1;
-
-                  var ym = calYear + "-" + String(m).padStart(2, "0");
-
+                  var ym = y + "-" + String(m).padStart(2, "0");
                   var u = new URL(window.location.href);
                   u.searchParams.set("kpi_ym", ym);
-                  u.searchParams.set("kpi_year", y);      // ✅ ADD THIS LINE
+                  u.searchParams.set("kpi_year", y);
                   u.searchParams.set("kpi_tab", "activity");
                   window.location.href = u.toString();
                 }
               </script>
 
-              <?php else: ?>
+              <?php elseif ($tab === 'monthly'): ?>
               <div class="kpi-year-selector">
                 <label for="kpiYearSelectMonthly">Year</label>
                 <select id="kpiYearSelectMonthly" onchange="updateMonthlyYearUrl()">
                   <?php
                     $currentYear = (int)date('Y');
-                    $minYear = 2026;
                     $startYear = max($minYear, $currentYear);
                     for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                       <option value="<?php echo $y; ?>" <?php selected($monthlyBaseYear, $y); ?>><?php echo $y; ?></option>
                   <?php endfor; ?>
                 </select>
               </div>
+
+              <?php if ($mode === 'financial'): ?>
+              <div class="kpi-fy-toggle-wrap">
+                <label class="kpi-fy-toggle" title="Toggle Financial Year view">
+                  <input type="checkbox" id="kpiFyViewToggle"
+                    <?php checked($fyViewEnabled, true); ?>
+                    onchange="toggleFyView(this.checked)">
+                  <span class="kpi-fy-toggle-track"></span>
+                  <span class="kpi-fy-toggle-label">FY View<?php echo $fyViewEnabled ? ' <em>' . esc_html($fyLabel) . '</em>' : ''; ?></span>
+                </label>
+              </div>
+              <script>
+                function toggleFyView(enabled) {
+                  var u = new URL(window.location.href);
+                  u.searchParams.set("kpi_fy_view", enabled ? "1" : "0");
+                  window.location.href = u.toString();
+                }
+              </script>
               <?php endif; ?>
 
               <script>
                 function updateMonthlyYearUrl() {
                   var y = parseInt(document.getElementById("kpiYearSelectMonthly").value, 10);
-
-                  var mode = (window.kpiFront && kpiFront.yearMode) ? kpiFront.yearMode : "calendar";
-                  var fyStart = (window.kpiFront && kpiFront.fyStartMonth) ? parseInt(kpiFront.fyStartMonth, 10) : 1;
-
                   var u = new URL(window.location.href);
-
-                  // keep the SAME month as the current kpi_ym (this is the “activity month memory”)
                   var curYm = u.searchParams.get("kpi_ym") || (kpiFront?.todayYm ?? "");
                   var m = 1;
-                  if (/^\d{4}-\d{2}$/.test(curYm)) {
-                    m = parseInt(curYm.slice(5, 7), 10);
-                  }
-
-                  // set the calendar year for kpi_ym
-                  var calYear = y;
-                  // if (mode === "financial" && m < fyStart) calYear = y + 1;
-
-                  var ym = calYear + "-" + String(m).padStart(2, "0");
-
+                  if (/^\d{4}-\d{2}$/.test(curYm)) m = parseInt(curYm.slice(5, 7), 10);
+                  var ym = y + "-" + String(m).padStart(2, "0");
                   u.searchParams.set("kpi_tab", "monthly");
                   u.searchParams.set("kpi_year", y);
-                  u.searchParams.set("kpi_ym", ym); // ✅ keeps month, syncs year
+                  u.searchParams.set("kpi_ym", ym);
                   window.location.href = u.toString();
                 }
               </script>
 
+              <?php elseif ($tab === 'charts'): ?>
+              <div class="kpi-year-selector">
+                <label for="kpiYearSelectCharts">Year</label>
+                <select id="kpiYearSelectCharts" onchange="updateChartsYearUrl()">
+                  <?php
+                    $currentYear = (int)date('Y');
+                    $startYear = max($minYear, $currentYear);
+                    for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
+                      <option value="<?php echo $y; ?>" <?php selected($monthlyBaseYear, $y); ?>><?php echo $y; ?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+              <script>
+                function updateChartsYearUrl() {
+                  var y = parseInt(document.getElementById("kpiYearSelectCharts").value, 10);
+                  var u = new URL(window.location.href);
+                  u.searchParams.set("kpi_tab", "charts");
+                  u.searchParams.set("kpi_year", y);
+                  window.location.href = u.toString();
+                }
+              </script>
+              <?php endif; ?>
+
               <div class="kpi-tabs">
                 <a class="kpi-tab <?php echo $tab==='activity'?'is-active':''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab'=>'activity'])); ?>">Activity</a>
                 <a class="kpi-tab <?php echo $tab==='monthly'?'is-active':''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab'=>'monthly'])); ?>">Monthly figures</a>
+                <a class="kpi-tab <?php echo $tab==='charts'?'is-active':''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab'=>'charts'])); ?>">Charts</a>
               </div>
             </div>
           </div>
 
           <?php if ($tab === 'activity'): ?>
             <div class="kpi-savebar">
+              <span id="kpiAutosaveStatus" class="kpi-autosave-status"></span>
               <button class="kpi-btn kpi-btn--save kpi-btn--save-bar" type="submit" form="kpiActivityForm">Save Month</button>
             </div>
           <?php endif; ?>
 
           <?php if ($tab === 'activity'): ?>
+
+            <?php if ($periodInfo): ?>
+            <script type="application/json" id="kpi_period_info"><?php echo wp_json_encode($periodInfo); ?></script>
+            <?php endif; ?>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="kpiActivityForm">
               <?php wp_nonce_field('kpi_front_save_month'); ?>
@@ -789,13 +919,18 @@ class KPI_Frontend {
               </div>
               <div class="kpi-drawer-body">
                 <?php
-                  // include inactive too so user can re-enable ones they disabled earlier
-                  $allChannels = KPI_DB::get_channels($user_id, false);
+                  $globalChannels      = KPI_DB::get_channels($user_id, false);
+                  $drawerPeriodChannels = KPI_DB::get_channels_for_period($user_id, $ym, false);
                 ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form" id="kpiSettingsForm">
                   <?php wp_nonce_field('kpi_save_user_setup'); ?>
                   <input type="hidden" name="action" value="kpi_save_user_setup">
+                  <!-- Populated by JS before submit: "" = global (null), "YYYY-MM" = period -->
+                  <input type="hidden" name="kpi_period" id="kpiDrawerPeriodInput" value="" data-ym="<?php echo esc_attr($ym); ?>">
                   <input type="hidden" name="kpi_channels_json" id="kpi_channels_json_settings" value="">
+                  <!-- Per-editor JSON (no name = not submitted directly) -->
+                  <input type="hidden" id="kpi_channels_json_global" value="">
+                  <input type="hidden" id="kpi_channels_json_period" value="">
 
                   <?php $cycle = self::get_year_cycle_settings($user_id); ?>
                   <div class="kpi-cycle-box" style="margin:0 0 16px;">
@@ -825,10 +960,38 @@ class KPI_Frontend {
                     </div>
                   </div>
 
-                  <p class="kpi-drawer-hint">Edit your channels (rename, enable/disable, add/remove):</p>
+                  <!-- Channel set tabs -->
+                  <div class="kpi-dtabs" role="tablist">
+                    <button type="button" class="kpi-dtab is-active" data-view="global" role="tab"
+                      data-kpi-tip="Global channels are the default for all months">Global</button>
+                    <button type="button" class="kpi-dtab" data-view="period" role="tab"
+                      data-kpi-tip="Override channels for <?php echo esc_attr(date('F Y', strtotime($ym . '-01'))); ?> only">
+                      <?php echo esc_html(date('M Y', strtotime($ym . '-01'))); ?>
+                      <?php if ($periodHasOwnChannels): ?>
+                        <span class="kpi-dtab-badge">Custom</span>
+                      <?php endif; ?>
+                    </button>
+                  </div>
 
-                  <div class="kpi-drawer-editor">
-                    <?php echo self::render_channel_editor($allChannels, '_settings'); ?>
+                  <!-- Global panel -->
+                  <div class="kpi-drawer-panel" id="kpiDrawerPanel_global" role="tabpanel">
+                    <p class="kpi-drawer-hint">Default channels used across all months.</p>
+                    <div class="kpi-drawer-editor">
+                      <?php echo self::render_channel_editor($globalChannels, '_global'); ?>
+                    </div>
+                  </div>
+
+                  <!-- This Month panel -->
+                  <div class="kpi-drawer-panel" id="kpiDrawerPanel_period" role="tabpanel" style="display:none;">
+                    <p class="kpi-drawer-hint">
+                      Channels for <strong><?php echo esc_html(date('F Y', strtotime($ym . '-01'))); ?></strong>
+                      <?php if (!$periodHasOwnChannels): ?>
+                        <span class="kpi-drawer-hint-tag">(using global)</span>
+                      <?php endif; ?>
+                    </p>
+                    <div class="kpi-drawer-editor">
+                      <?php echo self::render_channel_editor($drawerPeriodChannels, '_period'); ?>
+                    </div>
                   </div>
 
                   <button type="submit" class="kpi-btn kpi-drawer-submit">Save Settings</button>
@@ -843,15 +1006,14 @@ class KPI_Frontend {
             <script type="application/json" id="kpi_activity_meta"><?php echo wp_json_encode([
               'ym' => $ym,
               'daysInMonth' => $daysInMonth,
-              // these keys are the HOT row keys (lead_123 etc)
               'selectedLeadKeys' => array_map(function($c){ return 'lead_' . (int)$c['id']; }, $channels),
             ]); ?></script>
 
-          <?php else: ?>
+          <?php elseif ($tab === 'monthly'): ?>
             <div class="kpi-card kpi-card--glass">
               <div class="kpi-hot-head">
                 <div>
-                  <h3>Monthly figures — <?php echo esc_html($monthlyBaseYear); ?></h3>
+                  <h3>Monthly figures — <?php echo $fyViewEnabled ? esc_html($fyLabel) : esc_html($monthlyBaseYear); ?></h3>
                   <p class="kpi-muted">View your yearly KPI breakdown by month.</p>
                 </div>
               </div>
@@ -860,9 +1022,44 @@ class KPI_Frontend {
 
               <script type="application/json" id="kpi_monthly_grid"><?php echo wp_json_encode($monthlyGrid); ?></script>
               <script type="application/json" id="kpi_monthly_meta"><?php echo wp_json_encode([
-                'year' => $monthlyBaseYear,
-                'yearShort' => substr((string)$monthlyBaseYear, -2),
+                'year'        => $monthlyBaseYear,
+                'yearShort'   => substr((string)$monthlyBaseYear, -2),
+                'monthLabels' => $fyMonthLabels,
+                'fyView'      => $fyViewEnabled,
               ]); ?></script>
+            </div>
+
+          <?php elseif ($tab === 'charts'): ?>
+            <div class="kpi-card kpi-card--glass">
+              <div class="kpi-hot-head">
+                <div>
+                  <h3>Charts — <?php echo $fyViewEnabled ? esc_html($fyLabel) : esc_html($monthlyBaseYear); ?></h3>
+                  <p class="kpi-muted">Visual overview of your KPI performance for the year.</p>
+                </div>
+              </div>
+
+              <div class="kpi-charts-grid">
+                <div class="kpi-chart-card">
+                  <h4>Leads by Channel</h4>
+                  <div class="kpi-chart-wrap">
+                    <canvas id="kpiChartLeads"></canvas>
+                  </div>
+                </div>
+                <div class="kpi-chart-card">
+                  <h4>Monthly Pipeline</h4>
+                  <div class="kpi-chart-wrap">
+                    <canvas id="kpiChartPipeline"></canvas>
+                  </div>
+                </div>
+                <div class="kpi-chart-card kpi-chart-card--full">
+                  <h4>Monthly Revenue</h4>
+                  <div class="kpi-chart-wrap">
+                    <canvas id="kpiChartRevenue"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <script type="application/json" id="kpi_chart_data"><?php echo wp_json_encode($chartData); ?></script>
             </div>
           <?php endif; ?>
         </div>
@@ -885,7 +1082,6 @@ class KPI_Frontend {
       $val = (float)$getter($monthly[$m] ?? []);
       $row[] = self::format_monthly_cell($fmt, $val);
 
-      // Include all months with data in YTD and average calculations
       if ($val > 0 || self::month_has_any_data($monthly[$m] ?? [])) {
         $ytd += $val;
         $den++;
@@ -901,7 +1097,6 @@ class KPI_Frontend {
     return $row;
   }
 
-  // Same layout, but getter receives month index (1..12)
   private static function build_monthly_row_with_month_index($label, $fmt, $active, $getter, $rowType='') {
     $row = [];
     $row[] = $label;
@@ -916,9 +1111,6 @@ class KPI_Frontend {
       if ($val > 0) {
         $ytd += $val;
         $den++;
-      } else {
-        // still count month if any underlying data exists? we can't know here, so we don't.
-        // keeps behavior consistent for ratios: only months with non-zero ratio count
       }
     }
 
@@ -1030,8 +1222,6 @@ class KPI_Frontend {
     }
 
     $pipelineKeys = KPI_DB::pipeline_fields();
-
-    // group pipeline changes by date so we call upsert once per date
     $pipeByDate = [];
 
     foreach ($patch['changes'] as $ch) {
@@ -1041,14 +1231,12 @@ class KPI_Frontend {
 
       if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) continue;
 
-      // lead_{id}
       if (strpos($key, 'lead_') === 0) {
         $cid = (int) substr($key, 5);
         KPI_DB::upsert_lead_day($user_id, $cid, $date, $val);
         continue;
       }
 
-      // pipeline fields
       if (in_array($key, $pipelineKeys, true)) {
         if (!isset($pipeByDate[$date])) $pipeByDate[$date] = [];
         $pipeByDate[$date][$key] = KPI_DB::sanitize_numeric($key, $val);

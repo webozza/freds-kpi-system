@@ -49,6 +49,7 @@
   var activityMeta = {};
   var autosaveQueue = [];
   var autosaveTimer = null;
+  var showDeleteModal = null;
 
   // ---------- autosave (debounced patch) ----------
   function queueAutosaveChange(date, key, value) {
@@ -58,13 +59,13 @@
 
   function scheduleAutosaveFlush() {
     if (autosaveTimer) clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(flushAutosave, 800); // debounce: 0.8s after last edit
+    autosaveTimer = setTimeout(flushAutosave, 800);
   }
 
   function flushAutosave() {
     if (!autosaveQueue.length) return;
 
-    // send and clear queue
+    setAutosaveStatus("saving");
     var payload = { changes: autosaveQueue.slice(0) };
     autosaveQueue = [];
 
@@ -72,13 +73,37 @@
       action: "kpi_autosave_patch",
       nonce: kpiFront.nonce,
       patch: JSON.stringify(payload),
+    }).done(function () {
+      setAutosaveStatus("saved");
     }).fail(function (xhr) {
-      // if it fails, put changes back so we don't lose them
+      setAutosaveStatus("error");
       try {
         var back = payload.changes || [];
         autosaveQueue = back.concat(autosaveQueue);
       } catch (e) {}
     });
+  }
+
+  function setAutosaveStatus(state) {
+    var el = document.getElementById("kpiAutosaveStatus");
+    if (!el) return;
+    el.className = "kpi-autosave-status";
+    if (state === "saving") {
+      el.classList.add("kpi-autosave-status--saving");
+      el.textContent = "Saving…";
+    } else if (state === "saved") {
+      el.classList.add("kpi-autosave-status--saved");
+      el.textContent = "✓ Saved";
+      setTimeout(function () {
+        if (el.classList.contains("kpi-autosave-status--saved")) {
+          el.textContent = "";
+          el.className = "kpi-autosave-status";
+        }
+      }, 3000);
+    } else if (state === "error") {
+      el.classList.add("kpi-autosave-status--error");
+      el.textContent = "⚠ Not saved";
+    }
   }
 
   // ---------- KPI card recalcs ----------
@@ -100,20 +125,17 @@
       return 0;
     }
 
-    // Sum leads from leads table
     var leads = 0;
     leadKeys.forEach(function (k) {
       leads += sumFromHot(hotLeads, leadsRows, k);
     });
 
-    // Update individual lead totals
     leadKeys.forEach(function (k) {
       var val = sumFromHot(hotLeads, leadsRows, k);
       var el = document.querySelector('.kpi-lead-total[data-key="' + k + '"]');
       if (el) el.textContent = fmtInt(val);
     });
 
-    // Sum sales data from sales table
     var calls = sumFromHot(hotSales, salesRows, "calls");
     var apps = sumFromHot(hotSales, salesRows, "appointments");
     var quotes = sumFromHot(hotSales, salesRows, "quotes");
@@ -144,10 +166,8 @@
     setText("kpi_total_quote_val", fmtMoney(quoteVal));
     setText("kpi_total_sales", fmtInt(sales));
     setText("kpi_total_sales_val", fmtMoney(salesVal));
-
     setText("kpi_avg_quote", fmtMoney(avgQuote));
     setText("kpi_avg_sale", fmtMoney(avgSale));
-
     setText("kpi_calls_from_leads", fmtPct(callsFromLeads));
     setText("kpi_apps_from_calls", fmtPct(appsFromCalls));
     setText("kpi_apps_from_leads", fmtPct(appsFromLeads));
@@ -172,12 +192,10 @@
     var hasTotalRow = !!isLeadsTable;
     var totalRowIndex = hasTotalRow ? rows.length : -1;
 
-    // build columns
     var colHeaders = ["Day"];
     for (var d = 1; d <= daysInMonth; d++) colHeaders.push(String(d));
     colHeaders.push("TOTAL");
 
-    // data rows: [Label, ...days..., Total]
     var data = rows.map(function (r, i) {
       var dayVals = (prefill[i] || []).slice(0, daysInMonth).map(function (v) {
         var n = toNum(v);
@@ -250,6 +268,8 @@
       columnSorting: false,
       minSpareRows: 0,
       rowHeaders: false,
+      undo: true,
+      fillHandle: true,
 
       cells: function (row, col) {
         var cp = {};
@@ -274,17 +294,15 @@
 
         var rMeta = rows[row] || {};
 
-        // Money rows: keep .00 + commas
         if (rMeta.type === "money") {
           cp.type = "numeric";
-          cp.numericFormat = { pattern: "0,0.00" }; // commas + 2 decimals
+          cp.numericFormat = { pattern: "0,0.00" };
           cp.renderer = Handsontable.renderers.NumericRenderer;
           return cp;
         }
 
-        // Int rows: no decimals (and optional commas)
         cp.type = "numeric";
-        cp.numericFormat = { pattern: "0,0" }; // commas, no decimals (e.g. 1,234)
+        cp.numericFormat = { pattern: "0,0" };
         cp.renderer = Handsontable.renderers.NumericRenderer;
         return cp;
       },
@@ -318,7 +336,6 @@
 
         recalcAllCards();
 
-        // ----- autosave patch for edited cells -----
         var ym = activityMeta.ym || (kpiFront?.todayYm ?? "");
         var y = parseInt(ym.slice(0, 4), 10);
         var mm = parseInt(ym.slice(5, 7), 10);
@@ -327,10 +344,7 @@
           var row = c[0];
           var col = c[1];
 
-          // only real day cells (1..daysInMonth)
           if (col < 1 || col > daysInMonth) return;
-
-          // ignore total row in leads table
           if (hasTotalRow && row === totalRowIndex) return;
 
           var day = col;
@@ -421,7 +435,7 @@
           if (hotLeads) {
             leadsRows.forEach(function (r, i) {
               var v = toNum(hotLeads.getDataAtCell(i, d));
-              payload.kpi[date][r.key] = Math.round(v); // leads always int
+              payload.kpi[date][r.key] = Math.round(v);
             });
           }
 
@@ -449,9 +463,6 @@
     var meta = readJson("kpi_monthly_meta") || {};
     if (!grid.length) return;
 
-    var yearShort =
-      meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
-
     var data = grid.map(function (r) {
       return r.slice(0, r.length - 1);
     });
@@ -464,34 +475,15 @@
       return "";
     });
 
+    // Issue 2: use FY/CY month labels from meta
     var colHeaders = ["Month"];
-
     if (meta.monthLabels && meta.monthLabels.length === 12) {
       for (var i = 0; i < 12; i++) colHeaders.push(meta.monthLabels[i]);
     } else {
-      var monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      var yearShort =
-        meta.yearShort ||
-        String(meta.year || new Date().getFullYear()).slice(-2);
-      for (var i = 0; i < 12; i++)
-        colHeaders.push(monthNames[i] + "-" + yearShort);
+      var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      var ys = meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
+      for (var i = 0; i < 12; i++) colHeaders.push(monthNames[i] + "-" + ys);
     }
-
-    colHeaders.push("Year to Date");
-    colHeaders.push("Averages");
 
     colHeaders.push("Year to Date");
     colHeaders.push("Averages");
@@ -583,7 +575,8 @@
   }
 
   // ---------- Channel Editor (Setup + Drawer) ----------
-  function initOneChannelEditor(editorId, addBtnId, jsonInputId) {
+  function initOneChannelEditor(editorId, addBtnId, jsonInputId, opts) {
+    opts = opts || {};
     var editor = document.getElementById(editorId);
     var addBtn = document.getElementById(addBtnId);
     var jsonInput = document.getElementById(jsonInputId);
@@ -606,7 +599,7 @@
         if (!name) return;
 
         out.push({
-          id: id, // 0 means "new"
+          id: id,
           name: name,
           is_active: activeEl && activeEl.checked ? 1 : 0,
           sort_order: order++,
@@ -620,7 +613,6 @@
       jsonInput.value = JSON.stringify(collectRows());
     }
 
-    // Live updates
     editor.addEventListener("input", function (e) {
       if (e.target.classList.contains("kpi-channel-name")) syncJson();
     });
@@ -629,17 +621,26 @@
       if (e.target.classList.contains("kpi-channel-active")) syncJson();
     });
 
-    // Remove row (event delegation)
     editor.addEventListener("click", function (e) {
       if (e.target.classList.contains("kpi-channel-remove")) {
         e.preventDefault();
         var row = e.target.closest(".kpi-channel-row");
-        if (row) row.remove();
-        syncJson();
+        if (!row) return;
+        var rowId = parseInt(row.getAttribute("data-id") || "0", 10);
+        if (opts.confirmDelete && rowId > 0 && showDeleteModal) {
+          var nameEl = row.querySelector(".kpi-channel-name");
+          var channelName = nameEl ? nameEl.value.trim() : "this channel";
+          showDeleteModal(channelName, function () {
+            row.remove();
+            syncJson();
+          });
+        } else {
+          row.remove();
+          syncJson();
+        }
       }
     });
 
-    // Add row
     addBtn.addEventListener("click", function () {
       var row = document.createElement("div");
       row.className = "kpi-channel-row";
@@ -651,14 +652,12 @@
 
       editor.appendChild(row);
 
-      // focus new input
       var inp = row.querySelector(".kpi-channel-name");
       if (inp) inp.focus();
 
       syncJson();
     });
 
-    // Ensure JSON is updated right before submit
     var form = editor.closest("form");
     if (form) {
       form.addEventListener("submit", function () {
@@ -666,23 +665,30 @@
       });
     }
 
-    // initial
     syncJson();
   }
 
   function initChannelEditors() {
-    // Setup page editor
+    // Setup form (initial onboarding)
     initOneChannelEditor(
       "kpiChannelEditor",
       "kpiAddChannel",
       "kpi_channels_json",
     );
 
-    // Drawer editor
+    // Drawer: global editor (confirm before deleting existing channels)
     initOneChannelEditor(
-      "kpiChannelEditor_settings",
-      "kpiAddChannel_settings",
-      "kpi_channels_json_settings",
+      "kpiChannelEditor_global",
+      "kpiAddChannel_global",
+      "kpi_channels_json_global",
+      { confirmDelete: true },
+    );
+
+    // Drawer: period-specific editor
+    initOneChannelEditor(
+      "kpiChannelEditor_period",
+      "kpiAddChannel_period",
+      "kpi_channels_json_period",
     );
   }
 
@@ -704,12 +710,409 @@
     refresh();
   }
 
+  // ---------- Settings Drawer Tabs ----------
+  function initDrawerTabs() {
+    var tabs = document.querySelectorAll(".kpi-dtab");
+    if (!tabs.length) return;
+
+    var settingsForm = document.getElementById("kpiSettingsForm");
+    var periodInput  = document.getElementById("kpiDrawerPeriodInput");
+    var mainJsonInput = document.getElementById("kpi_channels_json_settings");
+    var currentView  = "global";
+
+    function syncFormForActiveTab() {
+      var activeJsonId = currentView === "global"
+        ? "kpi_channels_json_global"
+        : "kpi_channels_json_period";
+      var activeJson = document.getElementById(activeJsonId);
+      if (activeJson && mainJsonInput) mainJsonInput.value = activeJson.value;
+      if (periodInput) {
+        // "" → saved as null (global), "YYYY-MM" → saved as period
+        periodInput.value = currentView === "global"
+          ? ""
+          : (periodInput.getAttribute("data-ym") || "");
+      }
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var view = tab.getAttribute("data-view");
+        if (!view) return;
+        currentView = view;
+
+        tabs.forEach(function (t) { t.classList.remove("is-active"); });
+        tab.classList.add("is-active");
+
+        var globalPanel = document.getElementById("kpiDrawerPanel_global");
+        var periodPanel = document.getElementById("kpiDrawerPanel_period");
+        if (globalPanel) globalPanel.style.display = view === "global" ? "" : "none";
+        if (periodPanel) periodPanel.style.display = view === "period" ? "" : "none";
+
+        syncFormForActiveTab();
+      });
+    });
+
+    if (settingsForm) {
+      settingsForm.addEventListener("submit", function () {
+        syncFormForActiveTab();
+      });
+    }
+
+    syncFormForActiveTab();
+  }
+
+  // ---------- Delete Confirmation Modal ----------
+  function initDeleteModal() {
+    var modal = document.createElement("div");
+    modal.className = "kpi-modal-backdrop";
+    modal.id = "kpiDeleteModal";
+    modal.innerHTML =
+      '<div class="kpi-modal-box">' +
+        '<h3 class="kpi-modal-title">Delete channel permanently?</h3>' +
+        '<p class="kpi-modal-body" id="kpiDeleteModalBody"></p>' +
+        '<div class="kpi-modal-actions">' +
+          '<button type="button" class="kpi-btn kpi-btn--danger" id="kpiDeleteConfirmBtn">Delete permanently</button>' +
+          '<button type="button" class="kpi-btn kpi-btn--ghost" id="kpiDeleteCancelBtn">Cancel</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    function hideModal() {
+      modal.classList.remove("is-visible");
+    }
+
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) hideModal();
+    });
+
+    document.getElementById("kpiDeleteCancelBtn").addEventListener("click", hideModal);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && modal.classList.contains("is-visible")) hideModal();
+    });
+
+    showDeleteModal = function (channelName, onConfirm) {
+      var bodyEl = document.getElementById("kpiDeleteModalBody");
+      if (bodyEl) {
+        bodyEl.innerHTML =
+          "Deleting <strong>" + escHtml(channelName) + "</strong> will permanently remove " +
+          "all historical lead data for this channel across every month. This cannot be undone.";
+      }
+
+      // Replace confirm button to clear any previous listener
+      var oldBtn = document.getElementById("kpiDeleteConfirmBtn");
+      var newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      newBtn.addEventListener("click", function () {
+        hideModal();
+        onConfirm();
+      });
+
+      modal.classList.add("is-visible");
+    };
+  }
+
+  // ---------- Issue 1: Per-period channel prompt ----------
+  function initPeriodChannelPrompt() {
+    var info = readJson("kpi_period_info");
+    if (!info || info.has_own_channels) return;
+
+    var shell = document.querySelector(".kpi-shell");
+    var activityForm = document.getElementById("kpiActivityForm");
+    if (!shell || !activityForm) return;
+
+    var nearestHtml = info.nearest_period
+      ? '<button type="button" class="kpi-banner-btn kpi-banner-btn--primary" id="kpiCopyChannels">' +
+          'Copy from ' + escHtml(info.nearest_period_label) +
+        '</button>'
+      : '';
+
+    var banner = document.createElement("div");
+    banner.className = "kpi-period-banner";
+    banner.innerHTML =
+      '<div class="kpi-period-banner-inner">' +
+        '<div class="kpi-period-banner-text">' +
+          '<strong>' + escHtml(info.period_label) + '</strong> is using your global channel settings.' +
+          (info.nearest_period
+            ? ' Copy from <strong>' + escHtml(info.nearest_period_label) + '</strong> to customise this month independently.'
+            : ' Open settings to configure channels for this month.') +
+        '</div>' +
+        '<div class="kpi-period-banner-actions">' +
+          nearestHtml +
+          '<button type="button" class="kpi-banner-btn kpi-banner-btn--ghost" id="kpiOpenSettingsFromBanner">Customise this month</button>' +
+          '<button type="button" class="kpi-banner-btn kpi-banner-btn--dismiss" id="kpiDismissBanner" title="Dismiss">&times;</button>' +
+        '</div>' +
+      '</div>';
+
+    shell.insertBefore(banner, activityForm);
+
+    // Copy from previous period
+    var copyBtn = document.getElementById("kpiCopyChannels");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        copyBtn.disabled = true;
+        copyBtn.textContent = "Copying…";
+
+        $.post(kpiFront.ajaxUrl, {
+          action: "kpi_copy_period_channels",
+          nonce: kpiFront.nonceCopy,
+          from_period: info.nearest_period,
+          to_period: info.period,
+        })
+          .done(function (res) {
+            if (res.success) {
+              window.location.reload();
+            } else {
+              copyBtn.disabled = false;
+              copyBtn.textContent = "Copy from " + info.nearest_period_label;
+              alert("Could not copy channels. Please try again.");
+            }
+          })
+          .fail(function () {
+            copyBtn.disabled = false;
+            copyBtn.textContent = "Copy from " + info.nearest_period_label;
+            alert("Request failed. Please try again.");
+          });
+      });
+    }
+
+    // Open settings drawer
+    var openBtn = document.getElementById("kpiOpenSettingsFromBanner");
+    if (openBtn) {
+      openBtn.addEventListener("click", function () {
+        var settingsToggle = document.getElementById("kpiSettingsToggle");
+        if (settingsToggle) settingsToggle.click();
+      });
+    }
+
+    // Dismiss
+    var dismissBtn = document.getElementById("kpiDismissBanner");
+    if (dismissBtn) {
+      dismissBtn.addEventListener("click", function () {
+        banner.style.opacity = "0";
+        banner.style.transform = "translateY(-8px)";
+        setTimeout(function () { banner.remove(); }, 300);
+      });
+    }
+  }
+
+  // HTML-escape helper for JS
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // ---------- Issue 3: Charts (Chart.js) ----------
+  function initCharts() {
+    var chartData = readJson("kpi_chart_data");
+    if (!chartData || !window.Chart) return;
+
+    var chartDefaults = {
+      color: "rgba(255,255,255,0.85)",
+      plugins: {
+        legend: {
+          labels: {
+            color: "rgba(255,255,255,0.85)",
+            font: { size: 12, weight: "700" },
+            padding: 16,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          backgroundColor: "rgba(11,18,32,0.95)",
+          borderColor: "rgba(255,255,255,0.14)",
+          borderWidth: 1,
+          titleColor: "rgba(255,255,255,0.9)",
+          bodyColor: "rgba(255,255,255,0.75)",
+          padding: 12,
+          cornerRadius: 10,
+        },
+      },
+    };
+
+    // Shared grid styling
+    var gridStyle = {
+      color: "rgba(255,255,255,0.08)",
+      borderColor: "rgba(255,255,255,0.12)",
+    };
+
+    var tickStyle = { color: "rgba(255,255,255,0.6)", font: { size: 11 } };
+
+    // ── Chart 1: Leads by Channel (Donut) ──────────────────────────────
+    var leadsCtx = document.getElementById("kpiChartLeads");
+    if (leadsCtx && chartData.leadsByChannel) {
+      var ld = chartData.leadsByChannel;
+      var palette = [
+        "#66f0c2","#8aa6ff","#ffb347","#ff6b6b","#c9a0dc",
+        "#87d37c","#f7ca18","#ff8c94","#6bc5f8","#f0a500",
+        "#a29bfe","#fd79a8","#55efc4","#fdcb6e","#e17055",
+      ];
+
+      new Chart(leadsCtx, {
+        type: "doughnut",
+        data: {
+          labels: ld.labels,
+          datasets: [{
+            data: ld.values,
+            backgroundColor: ld.labels.map(function(_, i){
+              return palette[i % palette.length];
+            }),
+            borderColor: "rgba(11,18,32,0.6)",
+            borderWidth: 2,
+            hoverOffset: 6,
+          }],
+        },
+        options: Object.assign({}, chartDefaults, {
+          cutout: "62%",
+          plugins: Object.assign({}, chartDefaults.plugins, {
+            legend: Object.assign({}, chartDefaults.plugins.legend, {
+              position: "right",
+              labels: Object.assign({}, chartDefaults.plugins.legend.labels, {
+                boxWidth: 14,
+                boxHeight: 14,
+              }),
+            }),
+          }),
+        }),
+      });
+    }
+
+    // ── Chart 2: Monthly Pipeline (Multi-line) ──────────────────────────
+    var pipeCtx = document.getElementById("kpiChartPipeline");
+    if (pipeCtx && chartData.monthlyPipeline) {
+      var pd = chartData.monthlyPipeline;
+      new Chart(pipeCtx, {
+        type: "line",
+        data: {
+          labels: pd.months,
+          datasets: [
+            {
+              label: "Calls",
+              data: pd.calls,
+              borderColor: "#66f0c2",
+              backgroundColor: "rgba(102,240,194,0.12)",
+              pointBackgroundColor: "#66f0c2",
+              tension: 0.35,
+              fill: false,
+              borderWidth: 2,
+              pointRadius: 4,
+            },
+            {
+              label: "Appointments",
+              data: pd.appointments,
+              borderColor: "#8aa6ff",
+              backgroundColor: "rgba(138,166,255,0.12)",
+              pointBackgroundColor: "#8aa6ff",
+              tension: 0.35,
+              fill: false,
+              borderWidth: 2,
+              pointRadius: 4,
+            },
+            {
+              label: "Quotes",
+              data: pd.quotes,
+              borderColor: "#ffb347",
+              backgroundColor: "rgba(255,179,71,0.12)",
+              pointBackgroundColor: "#ffb347",
+              tension: 0.35,
+              fill: false,
+              borderWidth: 2,
+              pointRadius: 4,
+            },
+            {
+              label: "Sales",
+              data: pd.sales,
+              borderColor: "#ff6b6b",
+              backgroundColor: "rgba(255,107,107,0.12)",
+              pointBackgroundColor: "#ff6b6b",
+              tension: 0.35,
+              fill: false,
+              borderWidth: 2.5,
+              pointRadius: 5,
+            },
+          ],
+        },
+        options: Object.assign({}, chartDefaults, {
+          scales: {
+            x: {
+              grid: gridStyle,
+              ticks: tickStyle,
+            },
+            y: {
+              beginAtZero: true,
+              grid: gridStyle,
+              ticks: Object.assign({}, tickStyle, { precision: 0 }),
+            },
+          },
+        }),
+      });
+    }
+
+    // ── Chart 3: Monthly Revenue (Grouped Bar) ──────────────────────────
+    var revCtx = document.getElementById("kpiChartRevenue");
+    if (revCtx && chartData.monthlyRevenue) {
+      var rd = chartData.monthlyRevenue;
+      var sym = (kpiFront && kpiFront.currencySymbol) ? kpiFront.currencySymbol : "$";
+
+      new Chart(revCtx, {
+        type: "bar",
+        data: {
+          labels: rd.months,
+          datasets: [
+            {
+              label: "Quote Value",
+              data: rd.quoteValue,
+              backgroundColor: "rgba(138,166,255,0.65)",
+              borderColor: "#8aa6ff",
+              borderWidth: 1,
+              borderRadius: 6,
+            },
+            {
+              label: "Sales Value",
+              data: rd.salesValue,
+              backgroundColor: "rgba(102,240,194,0.65)",
+              borderColor: "#66f0c2",
+              borderWidth: 1,
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: Object.assign({}, chartDefaults, {
+          scales: {
+            x: {
+              grid: gridStyle,
+              ticks: tickStyle,
+            },
+            y: {
+              beginAtZero: true,
+              grid: gridStyle,
+              ticks: Object.assign({}, tickStyle, {
+                callback: function(val) {
+                  if (val >= 1000000) return sym + (val/1000000).toFixed(1) + "M";
+                  if (val >= 1000) return sym + (val/1000).toFixed(0) + "k";
+                  return sym + val;
+                },
+              }),
+            },
+          },
+        }),
+      });
+    }
+  }
+
   // ---------- init ----------
   $(function () {
     initHotActivity();
     initHotMonthly();
     initSettingsDrawer();
+    initDeleteModal();
     initChannelEditors();
+    initDrawerTabs();
     initYearCycleToggle();
+    initPeriodChannelPrompt();
+    initCharts();
   });
 })(jQuery);

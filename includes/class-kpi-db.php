@@ -70,17 +70,19 @@ class KPI_DB {
 
     dbDelta($sqlDaily);
 
-    // New: channels table (unlimited)
+    // Channels table: now includes period column for per-month channel support
     $sqlChannels = "CREATE TABLE $channels (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       user_id BIGINT UNSIGNED NOT NULL,
       name VARCHAR(191) NOT NULL,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       sort_order INT NOT NULL DEFAULT 0,
+      period VARCHAR(7) NULL DEFAULT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id),
       KEY user_id (user_id),
-      KEY is_active (is_active)
+      KEY is_active (is_active),
+      KEY user_period (user_id, period)
     ) $charset;";
 
     // New: daily leads per channel
@@ -101,6 +103,7 @@ class KPI_DB {
     dbDelta($sqlLeadsDaily);
 
     self::maybe_upgrade_table();
+    self::maybe_upgrade_channels_table_v2();
     self::maybe_seed_defaults_for_all_users();
     self::maybe_migrate_old_fixed_leads_once();
   }
@@ -119,14 +122,26 @@ class KPI_DB {
     $wpdb->query("ALTER TABLE $table ADD UNIQUE KEY user_date (user_id, kpi_date)");
   }
 
+  public static function maybe_upgrade_channels_table_v2() {
+    global $wpdb;
+    $table = self::table_channels();
+
+    $col = $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM $table LIKE %s", "period"));
+    if (!$col) {
+      $wpdb->query("ALTER TABLE $table ADD COLUMN period VARCHAR(7) NULL DEFAULT NULL AFTER sort_order");
+      $wpdb->query("ALTER TABLE $table ADD KEY user_period (user_id, period)");
+    }
+  }
+
   // ----------- defaults / channels -----------
   public static function ensure_default_channels($user_id) {
     global $wpdb;
     $t = self::table_channels();
     $user_id = (int)$user_id;
 
+    // Only seed global channels (period IS NULL) if none exist at all for this user
     $existing = (int)$wpdb->get_var($wpdb->prepare(
-      "SELECT COUNT(*) FROM $t WHERE user_id=%d",
+      "SELECT COUNT(*) FROM $t WHERE user_id=%d AND period IS NULL",
       $user_id
     ));
     if ($existing > 0) return;
@@ -149,7 +164,8 @@ class KPI_DB {
         'name' => $name,
         'is_active' => 1,
         'sort_order' => $order++,
-      ], ['%d','%s','%d','%d']);
+        'period' => null,
+      ], ['%d','%s','%d','%d','%s']);
     }
   }
 
@@ -158,16 +174,17 @@ class KPI_DB {
     // It seeds per-user defaults when they first visit via frontend anyway.
   }
 
+  // Returns global (period=NULL) channels. Backward-compatible.
   public static function get_channels($user_id, $only_active = true) {
     global $wpdb;
     $t = self::table_channels();
     $user_id = (int)$user_id;
 
-    $where = "WHERE user_id=%d";
+    $where = "WHERE user_id=%d AND period IS NULL";
     if ($only_active) $where .= " AND is_active=1";
 
     return $wpdb->get_results($wpdb->prepare(
-      "SELECT id, name, is_active, sort_order
+      "SELECT id, name, is_active, sort_order, period
        FROM $t
        $where
        ORDER BY sort_order ASC, id ASC",
@@ -175,10 +192,107 @@ class KPI_DB {
     ), ARRAY_A);
   }
 
-  public static function save_channels($user_id, array $rows) {
+  // Returns channels for a specific period. Falls back to global (period IS NULL) if none exist for period.
+  public static function get_channels_for_period($user_id, $period, $only_active = true) {
     global $wpdb;
     $t = self::table_channels();
     $user_id = (int)$user_id;
+    $period = sanitize_text_field($period);
+
+    // Try period-specific first
+    $activeClause = $only_active ? " AND is_active=1" : "";
+    $periodRows = $wpdb->get_results($wpdb->prepare(
+      "SELECT id, name, is_active, sort_order, period
+       FROM $t
+       WHERE user_id=%d AND period=%s $activeClause
+       ORDER BY sort_order ASC, id ASC",
+      $user_id, $period
+    ), ARRAY_A);
+
+    if (!empty($periodRows)) return $periodRows;
+
+    // Fall back to global channels
+    return self::get_channels($user_id, $only_active);
+  }
+
+  // Returns true if the period has its own channel records (not just falling back to global)
+  public static function period_has_own_channels($user_id, $period) {
+    global $wpdb;
+    $t = self::table_channels();
+    $user_id = (int)$user_id;
+    $period = sanitize_text_field($period);
+
+    $count = (int)$wpdb->get_var($wpdb->prepare(
+      "SELECT COUNT(*) FROM $t WHERE user_id=%d AND period=%s",
+      $user_id, $period
+    ));
+    return $count > 0;
+  }
+
+  // Returns the nearest previous period (YYYY-MM) that has its own channels, or null
+  public static function get_nearest_period_with_channels($user_id, $before_period) {
+    global $wpdb;
+    $t = self::table_channels();
+    $user_id = (int)$user_id;
+    $before_period = sanitize_text_field($before_period);
+
+    $result = $wpdb->get_var($wpdb->prepare(
+      "SELECT MAX(period) FROM $t
+       WHERE user_id=%d AND period IS NOT NULL AND period < %s",
+      $user_id, $before_period
+    ));
+
+    return $result ?: null;
+  }
+
+  // Copies channels from a source period (null = global) to a destination period.
+  // Returns the newly created channel rows.
+  public static function copy_channels_to_period($user_id, $from_period_or_null, $to_period) {
+    global $wpdb;
+    $t = self::table_channels();
+    $user_id = (int)$user_id;
+    $to_period = sanitize_text_field($to_period);
+
+    // Get source channels
+    if ($from_period_or_null === null) {
+      $sourceRows = self::get_channels($user_id, false); // all global
+    } else {
+      $from = sanitize_text_field($from_period_or_null);
+      $sourceRows = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $t WHERE user_id=%d AND period=%s ORDER BY sort_order ASC, id ASC",
+        $user_id, $from
+      ), ARRAY_A);
+    }
+
+    // Delete any existing channels for the destination period first
+    $wpdb->delete($t, ['user_id' => $user_id, 'period' => $to_period], ['%d','%s']);
+
+    $newRows = [];
+    foreach ($sourceRows as $src) {
+      $wpdb->insert($t, [
+        'user_id' => $user_id,
+        'name' => $src['name'],
+        'is_active' => (int)$src['is_active'],
+        'sort_order' => (int)$src['sort_order'],
+        'period' => $to_period,
+      ], ['%d','%s','%d','%d','%s']);
+      $newRows[] = [
+        'id' => (int)$wpdb->insert_id,
+        'name' => $src['name'],
+        'is_active' => (int)$src['is_active'],
+        'sort_order' => (int)$src['sort_order'],
+        'period' => $to_period,
+      ];
+    }
+
+    return $newRows;
+  }
+
+  public static function save_channels($user_id, array $rows, $period = null) {
+    global $wpdb;
+    $t = self::table_channels();
+    $user_id = (int)$user_id;
+    $period_val = ($period !== null) ? sanitize_text_field($period) : null;
 
     $keep_ids = [];
     $order = 0;
@@ -206,18 +320,31 @@ class KPI_DB {
           'name' => $name,
           'is_active' => $is_active,
           'sort_order' => $order++,
-        ], ['%d','%s','%d','%d']);
+          'period' => $period_val,
+        ], ['%d','%s','%d','%d','%s']);
         $keep_ids[] = (int)$wpdb->insert_id;
       }
     }
 
-    // If user removed everything, keep table empty (allowed)
-    if (!empty($keep_ids)) {
-      $placeholders = implode(',', array_fill(0, count($keep_ids), '%d'));
-      $sql = "DELETE FROM $t WHERE user_id=%d AND id NOT IN ($placeholders)";
-      $wpdb->query($wpdb->prepare($sql, array_merge([$user_id], $keep_ids)));
+    // Delete channels for this period that were not kept
+    if ($period_val !== null) {
+      // Period-specific: only delete from this period
+      if (!empty($keep_ids)) {
+        $placeholders = implode(',', array_fill(0, count($keep_ids), '%d'));
+        $sql = "DELETE FROM $t WHERE user_id=%d AND period=%s AND id NOT IN ($placeholders)";
+        $wpdb->query($wpdb->prepare($sql, array_merge([$user_id, $period_val], $keep_ids)));
+      } else {
+        $wpdb->delete($t, ['user_id' => $user_id, 'period' => $period_val], ['%d','%s']);
+      }
     } else {
-      $wpdb->delete($t, ['user_id' => $user_id], ['%d']);
+      // Global (period IS NULL): delete global channels not kept
+      if (!empty($keep_ids)) {
+        $placeholders = implode(',', array_fill(0, count($keep_ids), '%d'));
+        $sql = "DELETE FROM $t WHERE user_id=%d AND period IS NULL AND id NOT IN ($placeholders)";
+        $wpdb->query($wpdb->prepare($sql, array_merge([$user_id], $keep_ids)));
+      } else {
+        $wpdb->query($wpdb->prepare("DELETE FROM $t WHERE user_id=%d AND period IS NULL", $user_id));
+      }
     }
   }
 
@@ -399,6 +526,7 @@ class KPI_DB {
     return $out;
   }
 
+  // Returns [month_1..12][channel_id] = total (original ID-based, for activity tab)
   public static function get_year_leads_monthly_totals($user_id, $year) {
     global $wpdb;
     $t = self::table_leads_daily();
@@ -425,6 +553,61 @@ class KPI_DB {
     }
 
     return $out;
+  }
+
+  // Returns [month_1..12][channel_name] = total (name-based, works across per-period channels)
+  public static function get_year_leads_monthly_totals_by_name($user_id, $year) {
+    global $wpdb;
+    $t_leads = self::table_leads_daily();
+    $t_channels = self::table_channels();
+    $user_id = (int)$user_id;
+    $year = (int)$year;
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT MONTH(ld.kpi_date) AS m, c.name AS channel_name, SUM(ld.value) AS total
+       FROM $t_leads ld
+       INNER JOIN $t_channels c ON ld.channel_id = c.id
+       WHERE ld.user_id=%d AND YEAR(ld.kpi_date)=%d
+       GROUP BY MONTH(ld.kpi_date), c.name
+       ORDER BY MONTH(ld.kpi_date) ASC",
+      $user_id, $year
+    ), ARRAY_A);
+
+    $out = [];
+    for ($m=1; $m<=12; $m++) $out[$m] = [];
+
+    foreach ($rows as $r) {
+      $m = (int)$r['m'];
+      $out[$m][$r['channel_name']] = (int)$r['total'];
+    }
+
+    return $out;
+  }
+
+  // Returns ordered list of distinct channel names that have lead data in a given year.
+  // Falls back to global active channel names if no data.
+  public static function get_channel_names_for_monthly_view($user_id, $year) {
+    global $wpdb;
+    $t_leads = self::table_leads_daily();
+    $t_channels = self::table_channels();
+    $user_id = (int)$user_id;
+    $year = (int)$year;
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT c.name, MIN(c.sort_order) AS min_order
+       FROM $t_leads ld
+       INNER JOIN $t_channels c ON ld.channel_id = c.id
+       WHERE ld.user_id=%d AND YEAR(ld.kpi_date)=%d
+       GROUP BY c.name
+       ORDER BY min_order ASC, MIN(c.id) ASC",
+      $user_id, $year
+    ), ARRAY_A);
+
+    if (!empty($rows)) return array_column($rows, 'name');
+
+    // Fallback: return current active global channel names
+    $globals = self::get_channels($user_id, true);
+    return array_column($globals, 'name');
   }
 
   // ----------- one-time migration from old fixed leads columns -----------
@@ -473,7 +656,8 @@ class KPI_DB {
             'name' => $nm,
             'is_active' => 0,
             'sort_order' => 999,
-          ], ['%d','%s','%d','%d']);
+            'period' => null,
+          ], ['%d','%s','%d','%d','%s']);
           $nameToId[strtolower($nm)] = (int)$wpdb->insert_id;
         }
       }
