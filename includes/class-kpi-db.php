@@ -149,7 +149,7 @@ class KPI_DB {
     $defaults = [
       'Website',
       'Google Ads',
-      'Houzz',
+      'Cold Calling',
       'Facebook',
       'Referrals',
       'Repeat customers',
@@ -647,7 +647,7 @@ class KPI_DB {
     $oldCols = [
       'leads_website' => 'Website',
       'leads_google_ads' => 'Google Ads',
-      'leads_houzz' => 'Houzz',
+      'leads_houzz' => 'Cold Calling',
       'leads_facebook' => 'Facebook',
       'leads_referrals' => 'Referrals',
       'leads_repeat_customers' => 'Repeat customers',
