@@ -210,7 +210,7 @@ class KPI_Frontend {
           <div class="kpi-topbar">
             <div class="kpi-title">
               <div class="kpi-badge">KPI System</div>
-              <h2>Set up your KPI Tracker</h2>
+              <h2>Set up your KPI Tracker ...</h2>
               <p>Create, rename, enable/disable, and remove channels. You can add as many as you like.</p>
             </div>
           </div>
