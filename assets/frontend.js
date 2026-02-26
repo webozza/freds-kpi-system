@@ -80,7 +80,7 @@
       try {
         var back = payload.changes || [];
         autosaveQueue = back.concat(autosaveQueue);
-      } catch (e) {}
+      } catch (e) { }
     });
   }
 
@@ -256,13 +256,16 @@
 
     var hot = new Handsontable(container, {
       data: data,
-      colHeaders: colHeaders,
+      columns: colHeaders.map(function (h) {
+        return { title: h, className: 'htCenter cell-bg-color' };
+      }),
       rowHeaderWidth: 0,
       height: "auto",
       licenseKey: "non-commercial-and-evaluation",
       manualColumnResize: true,
       manualRowResize: true,
-      stretchH: "none",
+      stretchH: 'all',
+      width:"100%",
       contextMenu: true,
       outsideClickDeselects: false,
       columnSorting: false,
@@ -480,7 +483,7 @@
     if (meta.monthLabels && meta.monthLabels.length === 12) {
       for (var i = 0; i < 12; i++) colHeaders.push(meta.monthLabels[i]);
     } else {
-      var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       var ys = meta.yearShort || String(meta.year || new Date().getFullYear()).slice(-2);
       for (var i = 0; i < 12; i++) colHeaders.push(monthNames[i] + "-" + ys);
     }
@@ -530,13 +533,16 @@
 
     new Handsontable(container, {
       data: data,
-      colHeaders: colHeaders,
+      columns: colHeaders.map(function (h) {
+        return { title: h, className: 'htCenter cell-bg-color' };
+      }),
       rowHeaders: false,
-      height: "60vh",
+      height: "auto",
+      stretchH: 'all',
+      width:"100%",
       readOnly: true,
       licenseKey: "non-commercial-and-evaluation",
       manualColumnResize: true,
-      stretchH: "none",
       cells: function (row, col) {
         var cp = { readOnly: true };
         cp.renderer = col === 0 ? metricRenderer : cellRenderer;
@@ -716,9 +722,9 @@
     if (!tabs.length) return;
 
     var settingsForm = document.getElementById("kpiSettingsForm");
-    var periodInput  = document.getElementById("kpiDrawerPeriodInput");
+    var periodInput = document.getElementById("kpiDrawerPeriodInput");
     var mainJsonInput = document.getElementById("kpi_channels_json_settings");
-    var currentView  = "global";
+    var currentView = "global";
 
     function syncFormForActiveTab() {
       var activeJsonId = currentView === "global"
@@ -768,12 +774,12 @@
     modal.id = "kpiDeleteModal";
     modal.innerHTML =
       '<div class="kpi-modal-box">' +
-        '<h3 class="kpi-modal-title">Delete channel permanently?</h3>' +
-        '<p class="kpi-modal-body" id="kpiDeleteModalBody"></p>' +
-        '<div class="kpi-modal-actions">' +
-          '<button type="button" class="kpi-btn kpi-btn--danger" id="kpiDeleteConfirmBtn">Delete permanently</button>' +
-          '<button type="button" class="kpi-btn kpi-btn--ghost" id="kpiDeleteCancelBtn">Cancel</button>' +
-        '</div>' +
+      '<h3 class="kpi-modal-title">Delete channel permanently?</h3>' +
+      '<p class="kpi-modal-body" id="kpiDeleteModalBody"></p>' +
+      '<div class="kpi-modal-actions">' +
+      '<button type="button" class="kpi-btn kpi-btn--danger" id="kpiDeleteConfirmBtn">Delete permanently</button>' +
+      '<button type="button" class="kpi-btn kpi-btn--ghost" id="kpiDeleteCancelBtn">Cancel</button>' +
+      '</div>' +
       '</div>';
     document.body.appendChild(modal);
 
@@ -823,25 +829,25 @@
 
     var nearestHtml = info.nearest_period
       ? '<button type="button" class="kpi-banner-btn kpi-banner-btn--primary" id="kpiCopyChannels">' +
-          'Copy from ' + escHtml(info.nearest_period_label) +
-        '</button>'
+      'Copy from ' + escHtml(info.nearest_period_label) +
+      '</button>'
       : '';
 
     var banner = document.createElement("div");
     banner.className = "kpi-period-banner";
     banner.innerHTML =
       '<div class="kpi-period-banner-inner">' +
-        '<div class="kpi-period-banner-text">' +
-          '<strong>' + escHtml(info.period_label) + '</strong> is using your global channel settings.' +
-          (info.nearest_period
-            ? ' Copy from <strong>' + escHtml(info.nearest_period_label) + '</strong> to customise this month independently.'
-            : ' Open settings to configure channels for this month.') +
-        '</div>' +
-        '<div class="kpi-period-banner-actions">' +
-          nearestHtml +
-          '<button type="button" class="kpi-banner-btn kpi-banner-btn--ghost" id="kpiOpenSettingsFromBanner">Customise this month</button>' +
-          '<button type="button" class="kpi-banner-btn kpi-banner-btn--dismiss" id="kpiDismissBanner" title="Dismiss">&times;</button>' +
-        '</div>' +
+      '<div class="kpi-period-banner-text">' +
+      '<strong>' + escHtml(info.period_label) + '</strong> is using your global channel settings.' +
+      (info.nearest_period
+        ? ' Copy from <strong>' + escHtml(info.nearest_period_label) + '</strong> to customise this month independently.'
+        : ' Open settings to configure channels for this month.') +
+      '</div>' +
+      '<div class="kpi-period-banner-actions">' +
+      nearestHtml +
+      '<button type="button" class="kpi-banner-btn kpi-banner-btn--ghost" id="kpiOpenSettingsFromBanner">Customise this month</button>' +
+      '<button type="button" class="kpi-banner-btn kpi-banner-btn--dismiss" id="kpiDismissBanner" title="Dismiss">&times;</button>' +
+      '</div>' +
       '</div>';
 
     shell.insertBefore(banner, activityForm);
@@ -946,9 +952,9 @@
     if (leadsCtx && chartData.leadsByChannel) {
       var ld = chartData.leadsByChannel;
       var palette = [
-        "#66f0c2","#8aa6ff","#ffb347","#ff6b6b","#c9a0dc",
-        "#87d37c","#f7ca18","#ff8c94","#6bc5f8","#f0a500",
-        "#a29bfe","#fd79a8","#55efc4","#fdcb6e","#e17055",
+        "#66f0c2", "#8aa6ff", "#ffb347", "#ff6b6b", "#c9a0dc",
+        "#87d37c", "#f7ca18", "#ff8c94", "#6bc5f8", "#f0a500",
+        "#a29bfe", "#fd79a8", "#55efc4", "#fdcb6e", "#e17055",
       ];
 
       new Chart(leadsCtx, {
@@ -957,7 +963,7 @@
           labels: ld.labels,
           datasets: [{
             data: ld.values,
-            backgroundColor: ld.labels.map(function(_, i){
+            backgroundColor: ld.labels.map(function (_, i) {
               return palette[i % palette.length];
             }),
             borderColor: "rgba(11,18,32,0.6)",
@@ -1090,9 +1096,9 @@
               beginAtZero: true,
               grid: gridStyle,
               ticks: Object.assign({}, tickStyle, {
-                callback: function(val) {
-                  if (val >= 1000000) return sym + (val/1000000).toFixed(1) + "M";
-                  if (val >= 1000) return sym + (val/1000).toFixed(0) + "k";
+                callback: function (val) {
+                  if (val >= 1000000) return sym + (val / 1000000).toFixed(1) + "M";
+                  if (val >= 1000) return sym + (val / 1000).toFixed(0) + "k";
                   return sym + val;
                 },
               }),

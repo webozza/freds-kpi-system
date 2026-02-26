@@ -14,13 +14,14 @@
   --hot-base: #0b1220;
   --hot-head: #141f38;
   --hot-cell: #0f1a31;
-  --hot-cell-hover: #152244;
+  --hot-cell-hover: #578e90;
+  --hot-cell-bg: #132724;
   --hot-border: rgba(255, 255, 255, 0.12);
 }
 
 /* =========================================================
    KPI Handsontable Scrollbar (Activity + Monthly)
-========================================================= */
+========================================================= */∂
 
 /* Make the scrollbars show a pointer cursor */
 #kpiHotLeads .wtHolder,
@@ -58,11 +59,9 @@
 #kpiHotLeads .wtHolder::-webkit-scrollbar-thumb,
 #kpiHotSales .wtHolder::-webkit-scrollbar-thumb,
 #kpiHotMonthly .wtHolder::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.5),
-    rgba(255, 255, 255, 0.22)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.22));
   border-radius: 999px;
   border: 2px solid rgba(255, 255, 255, 0.08);
 }
@@ -70,11 +69,9 @@
 #kpiHotLeads .wtHolder::-webkit-scrollbar-thumb:hover,
 #kpiHotSales .wtHolder::-webkit-scrollbar-thumb:hover,
 #kpiHotMonthly .wtHolder::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.65),
-    rgba(255, 255, 255, 0.3)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.65),
+      rgba(255, 255, 255, 0.3));
 }
 
 /* Corner where horizontal + vertical scrollbars meet */
@@ -95,7 +92,7 @@
 .kpi-wrap {
   padding: 24px 0px;
   color: var(--kpi-text);
-  max-width: 1080px;
+  /* max-width: 1080px; */
   margin: 0 auto;
 }
 
@@ -105,7 +102,7 @@
   padding: 18px;
   border-radius: 22px;
   overflow: hidden;
-  background:#132724;
+  background: #132724;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 28px 60px rgba(0, 0, 0, 0.35);
 }
@@ -118,6 +115,7 @@
   flex-wrap: wrap;
   margin-bottom: 14px;
 }
+
 .kpi-badge {
   font-size: 16px;
 }
@@ -154,11 +152,9 @@
   border-radius: 14px;
 
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02));
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 
   cursor: pointer;
@@ -192,16 +188,12 @@
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.16);
   background:
-    radial-gradient(
-      600px 120px at 25% 0%,
+    radial-gradient(600px 120px at 25% 0%,
       rgba(102, 240, 194, 0.1),
-      transparent 55%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 55%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 /* Native checkbox -> custom */
@@ -243,11 +235,9 @@
 
 /* Checked state */
 .kpi-check input[type="checkbox"]:checked {
-  background: linear-gradient(
-    180deg,
-    var(--kpi-accent),
-    rgba(102, 240, 194, 0.7)
-  );
+  background: linear-gradient(180deg,
+      var(--kpi-accent),
+      rgba(102, 240, 194, 0.7));
   border-color: rgba(102, 240, 194, 0.65);
   box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
 }
@@ -261,16 +251,12 @@
 .kpi-check:has(input[type="checkbox"]:checked) {
   border-color: rgba(102, 240, 194, 0.28);
   background:
-    radial-gradient(
-      700px 140px at 20% 0%,
+    radial-gradient(700px 140px at 20% 0%,
       rgba(102, 240, 194, 0.16),
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 60%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 /* ===== Other channel name fields (same vibe as checkbox cards) ===== */
@@ -291,11 +277,9 @@
   border-radius: 16px;
 
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02));
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 
   transition:
@@ -310,16 +294,12 @@
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.16);
   background:
-    radial-gradient(
-      700px 140px at 25% 0%,
+    radial-gradient(700px 140px at 25% 0%,
       rgba(102, 240, 194, 0.1),
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 60%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 /* label matches muted + uppercase style */
@@ -399,11 +379,9 @@
   text-transform: uppercase;
 
   background:
-    radial-gradient(
-      900px 220px at 20% 0%,
+    radial-gradient(900px 220px at 20% 0%,
       rgba(255, 255, 255, 0.35),
-      transparent 55%
-    ),
+      transparent 55%),
     linear-gradient(180deg, var(--kpi-accent), rgba(102, 240, 194, 0.82));
 
   box-shadow:
@@ -463,9 +441,11 @@
 
 /* <= 640px */
 @media (max-width: 640px) {
+
   /* no outside padding changes */
   .kpi-wrap {
-    padding: 24px 0; /* keep as you want */
+    padding: 24px 0;
+    /* keep as you want */
     max-width: 100%;
   }
 
@@ -755,21 +735,15 @@
 
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    radial-gradient(
-      700px 220px at 15% 0%,
+    radial-gradient(700px 220px at 15% 0%,
       rgba(102, 240, 194, 0.1),
-      transparent 55%
-    ),
-    radial-gradient(
-      700px 220px at 85% 10%,
+      transparent 55%),
+    radial-gradient(700px 220px at 85% 10%,
       rgba(138, 166, 255, 0.1),
-      transparent 55%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 55%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.05),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.45),
@@ -786,12 +760,10 @@
   right: 14px;
   top: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.18),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent);
   opacity: 0.7;
 }
 
@@ -815,6 +787,7 @@
   padding: 10px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.14);
 }
+
 .kpi-kv:last-child {
   border-bottom: none;
 }
@@ -846,21 +819,15 @@
 /* Hint card (Spreadsheet) */
 .kpi-card--hint {
   background:
-    radial-gradient(
-      900px 260px at 15% 0%,
+    radial-gradient(900px 260px at 15% 0%,
       rgba(102, 240, 194, 0.14),
-      transparent 58%
-    ),
-    radial-gradient(
-      900px 260px at 85% 10%,
+      transparent 58%),
+    radial-gradient(900px 260px at 85% 10%,
       rgba(138, 166, 255, 0.14),
-      transparent 58%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 58%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 .kpi-card--hint p {
@@ -915,6 +882,7 @@
   .kpi-cards {
     grid-template-columns: 1fr;
   }
+
   .kpi-card {
     border-radius: 16px;
   }
@@ -928,14 +896,16 @@
   flex-wrap: nowrap;
   justify-content: flex-end;
 }
+
 .kpi-tabs {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: nowrap;
 }
+
 .kpi-tab {
-  padding: 8px 10px;
+  padding: 12px 20px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
@@ -945,12 +915,15 @@
   white-space: nowrap;
   text-decoration: none !important;
 }
+
+.kpi-tab:hover {
+ box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+ color:#fff;
+}
 .kpi-tab.is-active {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 240, 194, 0.2),
-    rgba(138, 166, 255, 0.18)
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 240, 194, 0.2),
+      rgba(138, 166, 255, 0.18));
   border-color: rgba(255, 255, 255, 0.24);
 }
 
@@ -1070,9 +1043,7 @@
   padding: 0 36px 0 14px;
   border-radius: 12px;
   color: var(--kpi-text);
-  background: rgba(255, 255, 255, 0.04)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.65)' d='M2 4l4 4 4-4'/%3E%3C/svg%3E")
-    no-repeat right 12px center;
+  background: rgba(255, 255, 255, 0.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.65)' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;
   border: 1px solid rgba(255, 255, 255, 0.14);
   outline: none;
   cursor: pointer;
@@ -1133,9 +1104,7 @@
   padding: 0 36px 0 14px;
   border-radius: 12px;
   color: var(--kpi-text);
-  background: rgba(255, 255, 255, 0.04)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.65)' d='M2 4l4 4 4-4'/%3E%3C/svg%3E")
-    no-repeat right 12px center;
+  background: rgba(255, 255, 255, 0.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.65)' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;
   border: 1px solid rgba(255, 255, 255, 0.14);
   outline: none;
   cursor: pointer;
@@ -1174,6 +1143,7 @@
     flex-wrap: wrap;
     justify-content: flex-start;
   }
+
   .kpi-tabs {
     width: 100%;
   }
@@ -1287,7 +1257,7 @@
   width: 100%;
   max-width: clamp(260px, 38vw, 380px);
   height: 100%;
-  background: linear-gradient(180deg, var(--kpi-bg1), var(--kpi-bg2));
+  background: #132724;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 22px;
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.4);
@@ -1401,11 +1371,9 @@
 }
 
 .kpi-drawer-check input[type="checkbox"]:checked {
-  background: linear-gradient(
-    180deg,
-    var(--kpi-accent),
-    rgba(102, 240, 194, 0.75)
-  );
+  background: linear-gradient(180deg,
+      var(--kpi-accent),
+      rgba(102, 240, 194, 0.75));
   border-color: var(--kpi-accent);
 }
 
@@ -1464,8 +1432,8 @@
 
 .kpi-drawer-submit {
   margin-top: 24px !important;
-  border:none !important;
-  color : #000 !important;
+  border: none !important;
+  color: #000 !important;
 }
 
 /* Mobile drawer full width */
@@ -1505,7 +1473,8 @@
   min-height: 40px;
   padding: 8px 18px;
   white-space: nowrap;
-  color: #000 !important
+  color: #000 !important;
+  font-size: 14px !important;
 }
 
 /* =========================
@@ -1633,11 +1602,9 @@
 }
 
 .kpi-code-month input[type="checkbox"]:checked {
-  background: linear-gradient(
-    180deg,
-    var(--kpi-accent),
-    rgba(102, 240, 194, 0.75)
-  );
+  background: linear-gradient(180deg,
+      var(--kpi-accent),
+      rgba(102, 240, 194, 0.75));
   border-color: var(--kpi-accent);
 }
 
@@ -1661,7 +1628,8 @@
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   color: var(--kpi-text) !important;
   font-size: 12px;
-  margin: 0 !important;
+  padding-top: 40px;
+  ;
 }
 
 .kpi-btn--ghost:hover {
@@ -1730,7 +1698,7 @@
 }
 
 /* Settings editor: ALWAYS 1 column */
-#kpiChannelEditor_global.kpi-channel-editor ,
+#kpiChannelEditor_global.kpi-channel-editor,
 #kpiChannelEditor_period.kpi-channel-editor {
   display: grid;
   grid-template-columns: 1fr;
@@ -1743,7 +1711,7 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-row,
-#kpiChannelEditor_global .kpi-channel-row ,
+#kpiChannelEditor_global .kpi-channel-row,
 #kpiChannelEditor_period .kpi-channel-row {
   position: relative;
   display: flex;
@@ -1754,11 +1722,9 @@
   border-radius: 14px;
 
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02));
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 
   transition:
@@ -1769,25 +1735,21 @@
 }
 
 #kpiChannelEditor .kpi-channel-row:hover,
-#kpiChannelEditor_global .kpi-channel-row:hover ,
+#kpiChannelEditor_global .kpi-channel-row:hover,
 #kpiChannelEditor_period .kpi-channel-row:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.16);
   background:
-    radial-gradient(
-      600px 120px at 25% 0%,
+    radial-gradient(600px 120px at 25% 0%,
       rgba(102, 240, 194, 0.1),
-      transparent 55%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 55%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 #kpiChannelEditor .kpi-channel-row:focus-within,
-#kpiChannelEditor_global .kpi-channel-row:focus-within ,
+#kpiChannelEditor_global .kpi-channel-row:focus-within,
 #kpiChannelEditor_period .kpi-channel-row:focus-within {
   border-color: rgba(102, 240, 194, 0.35);
   box-shadow:
@@ -1797,20 +1759,16 @@
 
 /* Active glow */
 #kpiChannelEditor .kpi-channel-row:has(.kpi-channel-active:checked),
-#kpiChannelEditor_global .kpi-channel-row:has(.kpi-channel-active:checked) ,
+#kpiChannelEditor_global .kpi-channel-row:has(.kpi-channel-active:checked),
 #kpiChannelEditor_period .kpi-channel-row:has(.kpi-channel-active:checked) {
   border-color: rgba(102, 240, 194, 0.28);
   background:
-    radial-gradient(
-      700px 140px at 20% 0%,
+    radial-gradient(700px 140px at 20% 0%,
       rgba(102, 240, 194, 0.16),
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
+      transparent 60%),
+    linear-gradient(180deg,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
-    );
+      rgba(255, 255, 255, 0.02));
 }
 
 /* -------------------------
@@ -1818,7 +1776,7 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-active,
-#kpiChannelEditor_global .kpi-channel-active ,
+#kpiChannelEditor_global .kpi-channel-active,
 #kpiChannelEditor_period .kpi-channel-active {
   appearance: none;
   -webkit-appearance: none;
@@ -1844,7 +1802,7 @@
 }
 
 #kpiChannelEditor .kpi-channel-active::after,
-#kpiChannelEditor_global .kpi-channel-active::after ,
+#kpiChannelEditor_global .kpi-channel-active::after,
 #kpiChannelEditor_period .kpi-channel-active::after {
   content: "";
   width: 9px;
@@ -1859,19 +1817,17 @@
 }
 
 #kpiChannelEditor .kpi-channel-active:checked,
-#kpiChannelEditor_global .kpi-channel-active:checked ,
+#kpiChannelEditor_global .kpi-channel-active:checked,
 #kpiChannelEditor_period .kpi-channel-active:checked {
-  background: linear-gradient(
-    180deg,
-    var(--kpi-accent),
-    rgba(102, 240, 194, 0.7)
-  );
+  background: linear-gradient(180deg,
+      var(--kpi-accent),
+      rgba(102, 240, 194, 0.7));
   border-color: rgba(102, 240, 194, 0.65);
   box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
 }
 
 #kpiChannelEditor .kpi-channel-active:checked::after,
-#kpiChannelEditor_global .kpi-channel-active:checked::after ,
+#kpiChannelEditor_global .kpi-channel-active:checked::after,
 #kpiChannelEditor_period .kpi-channel-active:checked::after {
   opacity: 1;
   transform: rotate(-45deg) scale(1);
@@ -1882,7 +1838,7 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-name,
-#kpiChannelEditor_global .kpi-channel-name ,
+#kpiChannelEditor_global .kpi-channel-name,
 #kpiChannelEditor_period .kpi-channel-name {
   flex: 1;
   height: 44px;
@@ -1902,13 +1858,13 @@
 }
 
 #kpiChannelEditor .kpi-channel-name::placeholder,
-#kpiChannelEditor_global .kpi-channel-name::placeholder ,
+#kpiChannelEditor_global .kpi-channel-name::placeholder,
 #kpiChannelEditor_period .kpi-channel-name::placeholder {
   color: rgba(255, 255, 255, 0.45);
 }
 
 #kpiChannelEditor .kpi-channel-name:focus,
-#kpiChannelEditor_global .kpi-channel-name:focus ,
+#kpiChannelEditor_global .kpi-channel-name:focus,
 #kpiChannelEditor_period .kpi-channel-name:focus {
   border-color: rgba(102, 240, 194, 0.55);
   box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
@@ -1921,7 +1877,7 @@
 ------------------------- */
 
 #kpiChannelEditor .kpi-channel-remove,
-#kpiChannelEditor_global .kpi-channel-remove ,
+#kpiChannelEditor_global .kpi-channel-remove,
 #kpiChannelEditor_period .kpi-channel-remove {
   width: auto !important;
   min-height: 40px !important;
@@ -1946,7 +1902,7 @@
 }
 
 #kpiChannelEditor .kpi-channel-remove:hover,
-#kpiChannelEditor_global .kpi-channel-remove:hover ,
+#kpiChannelEditor_global .kpi-channel-remove:hover,
 #kpiChannelEditor_period .kpi-channel-remove:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
@@ -1974,8 +1930,8 @@
   border-radius: 14px;
   border: 1px solid rgba(102, 240, 194, 0.28);
   background:
-    radial-gradient(800px 160px at 0% 0%, rgba(102,240,194,0.1), transparent 55%),
-    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    radial-gradient(800px 160px at 0% 0%, rgba(102, 240, 194, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
   padding: 14px 16px;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
@@ -1989,7 +1945,7 @@
 
 .kpi-period-banner-text {
   flex: 1;
-  color: rgba(255,255,255,0.8);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -2019,10 +1975,10 @@
 }
 
 .kpi-banner-btn--primary {
-  background: linear-gradient(180deg, var(--kpi-accent), rgba(102,240,194,0.82)) !important;
-  color: rgba(11,18,32,0.95) !important;
+  background: linear-gradient(180deg, var(--kpi-accent), rgba(102, 240, 194, 0.82)) !important;
+  color: rgba(11, 18, 32, 0.95) !important;
   border: none;
-  box-shadow: 0 6px 18px rgba(102,240,194,0.18) !important;
+  box-shadow: 0 6px 18px rgba(102, 240, 194, 0.18) !important;
 }
 
 .kpi-banner-btn--primary:hover {
@@ -2037,20 +1993,20 @@
 }
 
 .kpi-banner-btn--ghost {
-  background: rgba(255,255,255,0.06) !important;
-  border: 1px solid rgba(255,255,255,0.14) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
   color: var(--kpi-text) !important;
 }
 
 .kpi-banner-btn--ghost:hover {
-  background: rgba(255,255,255,0.1) !important;
-  border-color: rgba(255,255,255,0.2) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 .kpi-banner-btn--dismiss {
   background: transparent !important;
   border: none !important;
-  color: rgba(255,255,255,0.5) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
   font-size: 20px;
   line-height: 1;
   padding: 4px 8px;
@@ -2063,8 +2019,8 @@
 }
 
 .kpi-banner-btn--dismiss:hover {
-  background: rgba(255,255,255,0.08) !important;
-  color: rgba(255,255,255,0.8) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .kpi-drawer-hint-tag {
@@ -2073,8 +2029,8 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
-  background: rgba(138,166,255,0.18);
-  border: 1px solid rgba(138,166,255,0.3);
+  background: rgba(138, 166, 255, 0.18);
+  border: 1px solid rgba(138, 166, 255, 0.3);
   color: var(--kpi-accent2);
   border-radius: 999px;
   padding: 2px 8px;
@@ -2087,6 +2043,7 @@
     flex-direction: column;
     align-items: stretch;
   }
+
   .kpi-period-banner-actions {
     justify-content: flex-start;
   }
@@ -2109,14 +2066,14 @@
   user-select: none;
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
   transition: all 0.15s ease;
 }
 
 .kpi-fy-toggle:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .kpi-fy-toggle input[type="checkbox"] {
@@ -2131,8 +2088,8 @@
   width: 36px;
   height: 20px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   transition: background 0.2s ease, border-color 0.2s ease;
   flex-shrink: 0;
 }
@@ -2145,18 +2102,18 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.5);
+  background: rgba(255, 255, 255, 0.5);
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.kpi-fy-toggle input[type="checkbox"]:checked ~ .kpi-fy-toggle-track {
-  background: linear-gradient(135deg, var(--kpi-accent), rgba(102,240,194,0.75));
+.kpi-fy-toggle input[type="checkbox"]:checked~.kpi-fy-toggle-track {
+  background: linear-gradient(135deg, var(--kpi-accent), rgba(102, 240, 194, 0.75));
   border-color: var(--kpi-accent);
 }
 
-.kpi-fy-toggle input[type="checkbox"]:checked ~ .kpi-fy-toggle-track::after {
+.kpi-fy-toggle input[type="checkbox"]:checked~.kpi-fy-toggle-track::after {
   transform: translateX(16px);
-  background: rgba(11,18,32,0.9);
+  background: rgba(11, 18, 32, 0.9);
 }
 
 .kpi-fy-toggle-label {
@@ -2187,10 +2144,10 @@
 
 .kpi-chart-card {
   background:
-    radial-gradient(600px 200px at 10% 0%, rgba(102,240,194,0.08), transparent 60%),
-    radial-gradient(600px 200px at 90% 10%, rgba(138,166,255,0.08), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
-  border: 1px solid rgba(255,255,255,0.1);
+    radial-gradient(600px 200px at 10% 0%, rgba(102, 240, 194, 0.08), transparent 60%),
+    radial-gradient(600px 200px at 90% 10%, rgba(138, 166, 255, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 18px 18px 14px;
   position: relative;
@@ -2204,7 +2161,7 @@
   left: 12px;
   right: 12px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
 }
 
 .kpi-chart-card h4 {
@@ -2213,7 +2170,7 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: rgba(255,255,255,0.88);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 /* Full-width card (revenue chart spans both columns) */
@@ -2247,6 +2204,7 @@
   .kpi-charts-grid {
     grid-template-columns: 1fr;
   }
+
   .kpi-chart-card--full {
     grid-column: 1;
   }
@@ -2274,7 +2232,7 @@
   flex: 1;
   padding: 8px 12px;
   border-radius: 7px;
-  background: transparent ;
+  background: transparent;
   border: none !important;
   color: rgba(255, 255, 255, 0.5) !important;
   font-size: 13px;
@@ -2432,3 +2390,28 @@
   opacity: 1;
 }
 
+
+#kpiHotLeads.kpi-hot .htCore thead th, #kpiHotLeads.kpi-hot .htCore tbody th, #kpiHotSales.kpi-hot .htCore thead th, #kpiHotSales.kpi-hot .htCore tbody th {
+   background-color: var(--hot-cell-bg) !important;
+   color: #fff !important;
+   padding-top: 10px;
+}
+
+#kpiHotLeads.kpi-hot .htCore td.cell-bg-color, #kpiHotSales.kpi-hot .htCore td.cell-bg-color{
+   background-color: #243e38 !important;
+   cursor: pointer;
+   padding: 10px;
+}
+
+#kpiHotLeads.kpi-hot .htCore tbody tr:hover td, #kpiHotSales.kpi-hot .htCore tbody tr:hover td {
+    background-color: var(--hot-cell-bg) !important;
+}
+
+
+#kpiHotMonthly td.htDimmed, #kpiHotMonthly th.htDimmed {background-color: var(--hot-cell-bg)!important; padding: 5px;}
+#kpiHotMonthly .htCore thead th {background-color: var(--hot-cell-bg)!important;}
+/* #kpiHotMonthly .htCore thead th:hover {background-color: #81d3c7 !important;} */
+
+#kpiHotLeads.kpi-hot .htCore tr:hover .cell-bg-color, #kpiHotSales.kpi-hot .htCore tr:hover .cell-bg-color
+{    background-color: var(--hot-cell-hover) !important;}
+ 
