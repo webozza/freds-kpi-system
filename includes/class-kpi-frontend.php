@@ -163,6 +163,12 @@ class KPI_Frontend
 
     KPI_DB::save_channels($user_id, $rows, $kpi_period);
 
+    // --- Save business name (if posted) ---
+    if (isset($_POST['kpi_business_name'])) {
+      $biz = sanitize_text_field(wp_unslash($_POST['kpi_business_name']));
+      update_user_meta($user_id, 'kpi_business_name', $biz);
+    }
+
     // --- Save year cycle settings (if posted) ---
     if (isset($_POST['kpi_year_mode'])) {
       $mode = sanitize_key($_POST['kpi_year_mode']);
@@ -844,13 +850,18 @@ class KPI_Frontend
       $fyLabel = 'FY ' . $monthlyBaseYear . '–' . substr((string) $fyEndYear, -2);
     }
 
+    // Business name (owner's if member)
+    $biz_name_owner = $ctx['is_member'] ? (int)$ctx['owner_id'] : $user_id;
+    $business_name  = trim((string) get_user_meta($biz_name_owner, 'kpi_business_name', true));
+    $dashboard_title = $business_name ? esc_html($business_name) . ' KPI Dashboard' : 'Your KPI Dashboard';
+
     ob_start(); ?>
           <div class="kpi-wrap">
             <div class="kpi-shell">
               <div class="kpi-topbar">
                 <div class="kpi-title">
                   <div class="kpi-badge">KPI System</div>
-                  <h2>Your KPI Dashboard</h2>
+                  <h2><?php echo esc_html($dashboard_title); ?></h2>
                   <p class="kpi-subtitle"><?php echo esc_html($subtitle); ?></p>
                 </div>
 
@@ -1222,16 +1233,17 @@ class KPI_Frontend
                 </div>
 
               <?php else: ?>
-              <!-- Admin Channel Settings Drawer -->
+              <!-- Admin Settings Drawer -->
               <div id="kpiSettingsDrawer" class="kpi-drawer">
                 <div class="kpi-drawer-header">
-                  <h3>Channel Settings</h3>
+                  <h3>Settings</h3>
                   <button type="button" id="kpiSettingsClose" class="kpi-drawer-close">&times;</button>
                 </div>
                 <div class="kpi-drawer-body">
                   <?php
                   $globalChannels = KPI_DB::get_channels($user_id, false);
                   $drawerPeriodChannels = KPI_DB::get_channels_for_period($user_id, $ym, false);
+                  $saved_business_name = trim((string) get_user_meta($user_id, 'kpi_business_name', true));
                   ?>
                   <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form" id="kpiSettingsForm">
                     <?php wp_nonce_field('kpi_save_user_setup'); ?>
@@ -1242,6 +1254,15 @@ class KPI_Frontend
                     <!-- Per-editor JSON (no name = not submitted directly) -->
                     <input type="hidden" id="kpi_channels_json_global" value="">
                     <input type="hidden" id="kpi_channels_json_period" value="">
+
+                    <!-- Business Name -->
+                    <div class="kpi-drawer-field" style="margin-bottom:20px;">
+                      <label for="kpiBusinessName">Business Name</label>
+                      <input type="text" id="kpiBusinessName" name="kpi_business_name"
+                        value="<?php echo esc_attr($saved_business_name); ?>"
+                        placeholder="e.g. Acme Corp">
+                      <p class="kpi-drawer-hint" style="margin-top:6px;font-size:12px;">Shown in the dashboard title and invite emails.</p>
+                    </div>
 
                     <?php $cycle = self::get_year_cycle_settings($user_id); ?>
                     <div class="kpi-cycle-box" style="margin:0 0 16px;">

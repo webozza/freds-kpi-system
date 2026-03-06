@@ -1,0 +1,191 @@
+/* KPI System — Styled Login Page (invite / password reset) */
+
+html, body.login {
+  background: #0b1a17 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Hide default WP logo */
+body.login h1 a {
+  background-image: none !important;
+  background-color: transparent !important;
+  width: auto !important;
+  height: auto !important;
+  text-indent: 0 !important;
+  font-size: 0 !important;
+  display: block;
+  margin-bottom: 0 !important;
+}
+
+/* KPI branding block replacing the logo */
+#kpi-login-brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+#kpi-login-brand .kpi-login-badge {
+  display: inline-block;
+  background: rgba(102, 240, 194, 0.15);
+  border: 1px solid rgba(102, 240, 194, 0.3);
+  border-radius: 8px;
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #66f0c2;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+#kpi-login-brand h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+#kpi-login-brand p {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Login form container */
+#loginform,
+#resetpassform {
+  background: #132724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5) !important;
+  padding: 32px 32px 28px !important;
+}
+
+/* Labels */
+#loginform label,
+#resetpassform label {
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+}
+
+/* Inputs */
+#loginform input[type="text"],
+#loginform input[type="password"],
+#resetpassform input[type="text"],
+#resetpassform input[type="password"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  height: 48px !important;
+  padding: 0 16px !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s ease !important;
+}
+
+#loginform input[type="text"]:focus,
+#loginform input[type="password"]:focus,
+#resetpassform input[type="text"]:focus,
+#resetpassform input[type="password"]:focus {
+  border-color: rgba(102, 240, 194, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14) !important;
+  outline: none !important;
+}
+
+/* Password strength meter */
+#pass-strength-result {
+  border-radius: 8px !important;
+  border: none !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+/* Submit button */
+#loginform .button-primary,
+#resetpassform .button-primary,
+.login .button-primary {
+  background: linear-gradient(135deg, #66f0c2, #3dd9a4) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: #0b1a17 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  height: 48px !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: opacity 0.2s ease !important;
+  width: 100% !important;
+  cursor: pointer;
+}
+
+.login .button-primary:hover,
+.login .button-primary:focus {
+  opacity: 0.88 !important;
+  box-shadow: none !important;
+}
+
+/* Back to login / nav links */
+.login #nav,
+.login #backtoblog {
+  text-align: center;
+}
+
+.login #nav a,
+.login #backtoblog a {
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  transition: color 0.15s ease;
+}
+
+.login #nav a:hover,
+.login #backtoblog a:hover {
+  color: #66f0c2 !important;
+}
+
+/* Messages / errors */
+.login .message,
+.login .success {
+  background: rgba(102, 240, 194, 0.1) !important;
+  border-left: 4px solid #66f0c2 !important;
+  border-radius: 10px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+}
+
+.login .notice,
+.login #login_error {
+  background: rgba(255, 100, 100, 0.1) !important;
+  border-left: 4px solid #ff6464 !important;
+  border-radius: 10px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+}
+
+/* Password toggle eye button */
+.wp-pwd button {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.wp-pwd button:hover {
+  color: #66f0c2 !important;
+}
+
+/* Checkbox (remember me) */
+.login input[type="checkbox"] {
+  accent-color: #66f0c2;
+}
+
+/* Hide "Powered by WordPress" in some themes */
+.login #backtoblog {
+  display: none;
+}

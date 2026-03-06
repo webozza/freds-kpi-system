@@ -188,20 +188,49 @@ class KPI_Teams {
     if (!is_wp_error($reset_key)) {
       $owner      = get_user_by('id', $owner_id);
       $owner_name = $owner ? $owner->display_name : 'Your team admin';
+      $biz_raw    = trim((string) get_user_meta($owner_id, 'kpi_business_name', true));
+      $team_label = $biz_raw ?: $owner_name;
       $reset_url  = network_site_url(
         "wp-login.php?action=rp&key=$reset_key&login=" . rawurlencode($wp_user->user_login),
         'login'
       );
 
-      $subject = "You've been invited to join {$owner_name}'s KPI team";
-      $message  = "Hi {$wp_user->display_name},\n\n";
-      $message .= "{$owner_name} has invited you to join their KPI Dashboard team.\n\n";
-      $message .= "Click the link below to set your password and get started:\n";
-      $message .= $reset_url . "\n\n";
-      $message .= "This link will expire in 24 hours.\n\n";
-      $message .= "Best regards,\nThe KPI System";
+      $subject = "You've been invited to join {$team_label} KPI Team";
 
-      wp_mail($email, $subject, $message);
+      $member_first = esc_html(explode(' ', $wp_user->display_name)[0] ?: $wp_user->display_name);
+      $html  = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#0b1a17;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">';
+      $html .= '<table width="100%" cellpadding="0" cellspacing="0" style="background:#0b1a17;padding:40px 16px;">';
+      $html .= '<tr><td align="center">';
+      $html .= '<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#132724;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">';
+
+      // Header
+      $html .= '<tr><td style="background:linear-gradient(135deg,#0d2420 0%,#1a3d35 100%);padding:36px 40px 28px;text-align:center;">';
+      $html .= '<div style="display:inline-block;background:rgba(102,240,194,0.15);border:1px solid rgba(102,240,194,0.3);border-radius:8px;padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#66f0c2;text-transform:uppercase;margin-bottom:16px;">KPI System</div>';
+      $html .= '<h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;line-height:1.2;">' . esc_html($team_label) . '</h1>';
+      $html .= '<p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.5);">KPI Dashboard Invitation</p>';
+      $html .= '</td></tr>';
+
+      // Body
+      $html .= '<tr><td style="padding:36px 40px;">';
+      $html .= '<p style="margin:0 0 16px;font-size:16px;color:rgba(255,255,255,0.9);">Hi ' . $member_first . ',</p>';
+      $html .= '<p style="margin:0 0 24px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.6;"><strong style="color:#ffffff;">' . esc_html($owner_name) . '</strong> has invited you to join their KPI Dashboard team. Click the button below to set your password and get started.</p>';
+
+      // CTA button
+      $html .= '<div style="text-align:center;margin:32px 0;">';
+      $html .= '<a href="' . esc_url($reset_url) . '" style="display:inline-block;background:linear-gradient(135deg,#66f0c2,#3dd9a4);color:#0b1a17;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;letter-spacing:0.3px;">Accept Invitation &amp; Set Password</a>';
+      $html .= '</div>';
+
+      $html .= '<p style="margin:24px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.6;">This link will expire in 24 hours. If you didn\'t expect this invitation, you can safely ignore this email.</p>';
+      $html .= '</td></tr>';
+
+      // Footer
+      $html .= '<tr><td style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">';
+      $html .= '<p style="margin:0;font-size:12px;color:rgba(255,255,255,0.25);">Sent by KPI System &mdash; ' . esc_html(get_bloginfo('name')) . '</p>';
+      $html .= '</td></tr>';
+
+      $html .= '</table></td></tr></table></body></html>';
+
+      wp_mail($email, $subject, $html, ['Content-Type: text/html; charset=UTF-8']);
     }
 
     $record = $wpdb->get_row($wpdb->prepare(
