@@ -1226,6 +1226,50 @@
     }
   }
 
+  // ---------- Team Member: set display name ----------
+  function initTeamMemberName() {
+    var input   = document.getElementById("kpiMemberNameInput");
+    var saveBtn = document.getElementById("kpiMemberNameSave");
+    var msg     = document.getElementById("kpiMemberNameMsg");
+    if (!input || !saveBtn) return;
+
+    var nonceTeam = (kpiFront && kpiFront.nonceTeam) ? kpiFront.nonceTeam : "";
+
+    function showMsg(text, isError) {
+      if (!msg) return;
+      msg.textContent = text;
+      msg.className = "kpi-member-name-msg " + (isError ? "kpi-member-name-msg--error" : "kpi-member-name-msg--ok");
+      msg.style.display = "";
+      setTimeout(function () { msg.style.display = "none"; }, 3000);
+    }
+
+    saveBtn.addEventListener("click", function () {
+      var name = input.value.trim();
+      if (!name) { showMsg("Name cannot be empty.", true); return; }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+
+      $.post(kpiFront.ajaxUrl, {
+        action: "kpi_team_save_name",
+        nonce:  nonceTeam,
+        name:   name,
+      }).done(function (res) {
+        if (res.success) { showMsg("Name saved!", false); }
+        else { showMsg(res.data ? res.data.msg : "Failed to save.", true); }
+      }).fail(function () {
+        showMsg("Request failed.", true);
+      }).always(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+      });
+    });
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") saveBtn.click();
+    });
+  }
+
   // ---------- Read-only mode for combined/member views ----------
   function applyReadOnlyMode() {
     var meta = readJson("kpi_activity_meta");
@@ -1250,6 +1294,7 @@
     initPeriodChannelPrompt();
     initCharts();
     initTeamManagement();
+    initTeamMemberName();
     applyReadOnlyMode();
   });
 })(jQuery);

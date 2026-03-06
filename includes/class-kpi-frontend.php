@@ -94,14 +94,11 @@ class KPI_Frontend
     if (current_user_can('manage_options'))
       return true;
 
-    // Team members are granted access through their owner's membership
+    // Team members (active or pending) are granted access via their owner's membership
     if (class_exists('KPI_Teams')) {
-      $uid  = get_current_user_id();
-      $user = get_user_by('id', $uid);
-      if ($user && in_array('kpi_team_member', (array)$user->roles)) {
-        $owner_id = KPI_Teams::get_owner_for_member($uid);
-        return $owner_id && KPI_Teams::get_member_limit($owner_id) > 0;
-      }
+      $uid      = get_current_user_id();
+      $owner_id = KPI_Teams::get_owner_for_member($uid);
+      if ($owner_id && KPI_Teams::get_member_limit($owner_id) > 0) return true;
     }
 
     // Paid Memberships Pro gate (if installed)
@@ -360,7 +357,13 @@ class KPI_Frontend
       return '<div class="kpi-wrap"><div class="kpi-shell"><div class="kpi-card kpi-card--glass"><h3>Subscription required</h3><p>Please subscribe to access the KPI system.</p><p><a class="kpi-btn" href="' . esc_url($levels_url) . '">View Plans</a></p></div></div></div>';
     }
 
-    $user_id        = get_current_user_id();
+    $user_id = get_current_user_id();
+
+    // Activate pending team membership on dashboard visit (fallback if wp_login hook missed)
+    if (class_exists('KPI_Teams')) {
+      KPI_Teams::maybe_activate_on_login($user_id);
+    }
+
     $is_team_member = class_exists('KPI_Teams') && KPI_Teams::is_team_member($user_id);
 
     // Team members use their owner's channels — skip default seeding and setup
@@ -1022,12 +1025,22 @@ class KPI_Frontend
               </div>
 
               <?php if ($ctx['is_member']): ?>
+                <?php
+                $owner_user   = get_user_by('id', $ctx['owner_id']);
+                $owner_name   = $owner_user ? $owner_user->display_name : 'your team admin';
+                $current_name = wp_get_current_user()->display_name;
+                ?>
                 <div class="kpi-team-member-notice">
-                  <?php
-                  $owner_user = get_user_by('id', $ctx['owner_id']);
-                  $owner_name = $owner_user ? $owner_user->display_name : 'your team admin';
-                  ?>
-                  You're entering data as part of <strong><?php echo esc_html($owner_name); ?></strong>'s team.
+                  <span>You're entering data as part of <strong><?php echo esc_html($owner_name); ?></strong>'s team.</span>
+                  <div class="kpi-member-name-row">
+                    <label for="kpiMemberNameInput">Your name:</label>
+                    <input type="text" id="kpiMemberNameInput"
+                      value="<?php echo esc_attr($current_name); ?>"
+                      placeholder="Enter your display name"
+                      class="kpi-member-name-input">
+                    <button type="button" id="kpiMemberNameSave" class="kpi-btn kpi-btn--sm">Save</button>
+                    <span id="kpiMemberNameMsg" class="kpi-member-name-msg" style="display:none;"></span>
+                  </div>
                 </div>
               <?php endif; ?>
 

@@ -2,12 +2,12 @@
 /**
  * Plugin Name: KPI Calculator
  * Description: KPI Tracker (Frontend only) - Activity + Monthly Figures (per user)
- * Version: 1.8.1
+ * Version: 1.8.2
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('KPI_CALC_VERSION', '1.8.1');
+define('KPI_CALC_VERSION', '1.8.2');
 define('KPI_CALC_PATH', plugin_dir_path(__FILE__));
 define('KPI_CALC_URL', plugin_dir_url(__FILE__));
 
@@ -42,6 +42,20 @@ add_action('plugins_loaded', function () {
 add_action('wp_login', function ($user_login, $user) {
   KPI_Teams::maybe_activate_on_login((int)$user->ID);
 }, 10, 2);
+
+// Allow active team members to pass PMPro's page-level access check
+add_filter('pmpro_has_membership_access', function ($hasaccess, $post, $user, $levels) {
+  if ($hasaccess) return $hasaccess; // already allowed, don't interfere
+  if (!$user || !isset($user->ID)) return $hasaccess;
+
+  $owner_id = KPI_Teams::get_owner_for_member((int)$user->ID);
+  if (!$owner_id) return $hasaccess;
+
+  // Grant access only if the owner's plan supports team members
+  if (KPI_Teams::get_member_limit($owner_id) > 0) return true;
+
+  return $hasaccess;
+}, 10, 4);
 
 
 

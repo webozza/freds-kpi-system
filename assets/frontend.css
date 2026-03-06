@@ -2558,6 +2558,10 @@
 
 /* Member notice banner (shown to team members) */
 .kpi-team-member-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   background: rgba(102, 240, 194, 0.08);
   border: 1px solid rgba(102, 240, 194, 0.2);
   border-radius: 10px;
@@ -2571,32 +2575,101 @@
   color: var(--kpi-accent);
 }
 
-/* Member switcher in topbar */
-.kpi-member-switcher {
+.kpi-member-name-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--kpi-muted);
+  flex-wrap: wrap;
 }
 
-.kpi-member-switcher label {
+.kpi-member-name-row label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kpi-muted);
   white-space: nowrap;
 }
 
-.kpi-member-switcher select {
+.kpi-member-name-input {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 8px;
   color: var(--kpi-text);
   font-size: 13px;
-  padding: 6px 10px;
+  padding: 5px 10px;
+  width: 180px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.kpi-member-name-input:focus {
+  border-color: var(--kpi-accent);
+}
+
+.kpi-member-name-input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
+.kpi-member-name-msg {
+  font-size: 12px;
+}
+
+.kpi-member-name-msg--ok    { color: var(--kpi-accent); }
+.kpi-member-name-msg--error { color: #ff8a8a; }
+
+/* Member switcher in topbar — matches .kpi-select-control style */
+.kpi-member-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kpi-member-switcher label {
+  color: var(--kpi-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.kpi-member-switcher select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 140px;
+  height: 44px;
+  padding: 0 36px 0 14px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.45)' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 12px center,
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  color: var(--kpi-text);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.kpi-member-switcher select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .kpi-member-switcher select:focus {
-  border-color: var(--kpi-accent);
+  border-color: rgba(102, 240, 194, 0.55);
+  box-shadow: 0 0 0 3px rgba(102, 240, 194, 0.14);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.kpi-member-switcher select option {
+  background: #0b1220;
+  color: var(--kpi-text);
 }
 
 /* Read-only savebar */

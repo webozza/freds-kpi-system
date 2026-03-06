@@ -89,12 +89,12 @@ class KPI_Teams {
     ));
   }
 
-  // Returns owner_id if this user is an active team member, or null
+  // Returns owner_id if this user is an active or pending team member, or null
   public static function get_owner_for_member($user_id) {
     global $wpdb;
     $t      = self::table_teams();
     $result = $wpdb->get_var($wpdb->prepare(
-      "SELECT owner_id FROM $t WHERE member_id=%d AND status='active' LIMIT 1",
+      "SELECT owner_id FROM $t WHERE member_id=%d AND status IN ('pending','active') LIMIT 1",
       (int)$user_id
     ));
     return $result ? (int)$result : null;
@@ -347,11 +347,29 @@ class KPI_Teams {
     wp_send_json_success(['msg' => 'Member removed.']);
   }
 
+  public static function ajax_save_name() {
+    if (!is_user_logged_in()) wp_send_json_error(['msg' => 'Forbidden'], 403);
+    check_ajax_referer('kpi_team_action', 'nonce');
+
+    $user_id = get_current_user_id();
+    $name    = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
+
+    if ($name === '') wp_send_json_error(['msg' => 'Name cannot be empty.']);
+
+    $result = wp_update_user(['ID' => $user_id, 'display_name' => $name]);
+    if (is_wp_error($result)) {
+      wp_send_json_error(['msg' => $result->get_error_message()]);
+    }
+
+    wp_send_json_success(['msg' => 'Name updated.', 'name' => $name]);
+  }
+
   public static function register_ajax() {
-    add_action('wp_ajax_kpi_team_invite',  [__CLASS__, 'ajax_invite']);
-    add_action('wp_ajax_kpi_team_disable', [__CLASS__, 'ajax_disable']);
-    add_action('wp_ajax_kpi_team_enable',  [__CLASS__, 'ajax_enable']);
-    add_action('wp_ajax_kpi_team_remove',  [__CLASS__, 'ajax_remove']);
+    add_action('wp_ajax_kpi_team_invite',     [__CLASS__, 'ajax_invite']);
+    add_action('wp_ajax_kpi_team_disable',    [__CLASS__, 'ajax_disable']);
+    add_action('wp_ajax_kpi_team_enable',     [__CLASS__, 'ajax_enable']);
+    add_action('wp_ajax_kpi_team_remove',     [__CLASS__, 'ajax_remove']);
+    add_action('wp_ajax_kpi_team_save_name',  [__CLASS__, 'ajax_save_name']);
   }
 
   // ----------- UI helper -----------
