@@ -1013,36 +1013,14 @@ class KPI_Frontend
                     <?php endif; ?>
                   </div>
 
-                  <?php if (!$ctx['is_member']): ?>
-                    <button type="button" id="kpiSettingsToggle" class="kpi-settings-btn" title="Settings">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                      </svg>
-                    </button>
-                  <?php endif; ?>
+                  <button type="button" id="kpiSettingsToggle" class="kpi-settings-btn" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
-
-              <?php if ($ctx['is_member']): ?>
-                <?php
-                $owner_user   = get_user_by('id', $ctx['owner_id']);
-                $owner_name   = $owner_user ? $owner_user->display_name : 'your team admin';
-                $current_name = wp_get_current_user()->display_name;
-                ?>
-                <div class="kpi-team-member-notice">
-                  <span>You're entering data as part of <strong><?php echo esc_html($owner_name); ?></strong>'s team.</span>
-                  <div class="kpi-member-name-row">
-                    <label for="kpiMemberNameInput">Your name:</label>
-                    <input type="text" id="kpiMemberNameInput"
-                      value="<?php echo esc_attr($current_name); ?>"
-                      placeholder="Enter your display name"
-                      class="kpi-member-name-input">
-                    <button type="button" id="kpiMemberNameSave" class="kpi-btn kpi-btn--sm">Save</button>
-                    <span id="kpiMemberNameMsg" class="kpi-member-name-msg" style="display:none;"></span>
-                  </div>
-                </div>
-              <?php endif; ?>
 
               <?php if ($tab === 'activity' && $can_edit): ?>
                   <div class="kpi-savebar">
@@ -1212,11 +1190,39 @@ class KPI_Frontend
 
               <?php endif; ?>
 
-              <?php if (!$ctx['is_member']): ?>
               <!-- Settings Drawer Overlay -->
               <div id="kpiSettingsOverlay" class="kpi-drawer-overlay"></div>
 
-              <!-- Settings Drawer -->
+              <?php if ($ctx['is_member']): ?>
+                <?php
+                $owner_user   = get_user_by('id', $ctx['owner_id']);
+                $owner_name   = $owner_user ? $owner_user->display_name : 'your team admin';
+                $current_name = wp_get_current_user()->display_name;
+                ?>
+                <!-- Member Settings Drawer -->
+                <div id="kpiSettingsDrawer" class="kpi-drawer">
+                  <div class="kpi-drawer-header">
+                    <h3>Your Settings</h3>
+                    <button type="button" id="kpiSettingsClose" class="kpi-drawer-close">&times;</button>
+                  </div>
+                  <div class="kpi-drawer-body">
+                    <p class="kpi-drawer-hint">You're part of <strong><?php echo esc_html($owner_name); ?></strong>'s team.</p>
+                    <div class="kpi-drawer-field" style="margin-top:16px;">
+                      <label>Your display name</label>
+                      <input type="text" id="kpiMemberNameInput"
+                        value="<?php echo esc_attr($current_name); ?>"
+                        placeholder="Enter your display name"
+                        style="width:100%;height:44px;border-radius:12px;padding:0 14px;border:1.5px solid var(--kpi-border);background:var(--kpi-input-bg,rgba(255,255,255,.07));color:inherit;font-size:15px;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+                      <button type="button" id="kpiMemberNameSave" class="kpi-btn kpi-btn--sm">Save name</button>
+                      <span id="kpiMemberNameMsg" class="kpi-member-name-msg" style="display:none;font-size:13px;"></span>
+                    </div>
+                  </div>
+                </div>
+
+              <?php else: ?>
+              <!-- Admin Channel Settings Drawer -->
               <div id="kpiSettingsDrawer" class="kpi-drawer">
                 <div class="kpi-drawer-header">
                   <h3>Channel Settings</h3>
@@ -1303,7 +1309,7 @@ class KPI_Frontend
                   </form>
                 </div>
               </div>
-              <?php endif; // !$ctx['is_member'] — end settings drawer ?>
+              <?php endif; // is_member / else — end settings drawer ?>
             </div>
           </div>
         <?php

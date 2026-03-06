@@ -2556,63 +2556,6 @@
    Team Management
 ========================================================= */
 
-/* Member notice banner (shown to team members) */
-.kpi-team-member-notice {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  background: rgba(102, 240, 194, 0.08);
-  border: 1px solid rgba(102, 240, 194, 0.2);
-  border-radius: 10px;
-  color: rgba(255,255,255,0.8);
-  font-size: 13px;
-  padding: 10px 16px;
-  margin-bottom: 16px;
-}
-
-.kpi-team-member-notice strong {
-  color: var(--kpi-accent);
-}
-
-.kpi-member-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.kpi-member-name-row label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--kpi-muted);
-  white-space: nowrap;
-}
-
-.kpi-member-name-input {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 8px;
-  color: var(--kpi-text);
-  font-size: 13px;
-  padding: 5px 10px;
-  width: 180px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.kpi-member-name-input:focus {
-  border-color: var(--kpi-accent);
-}
-
-.kpi-member-name-input::placeholder {
-  color: rgba(255,255,255,0.25);
-}
-
-.kpi-member-name-msg {
-  font-size: 12px;
-}
-
 .kpi-member-name-msg--ok    { color: var(--kpi-accent); }
 .kpi-member-name-msg--error { color: #ff8a8a; }
 
