@@ -963,97 +963,6 @@ class KPI_Frontend
                     </div>
                   </div>
 
-                  <!-- Settings Drawer Overlay -->
-                  <div id="kpiSettingsOverlay" class="kpi-drawer-overlay"></div>
-
-                  <!-- Settings Drawer -->
-                  <div id="kpiSettingsDrawer" class="kpi-drawer">
-                    <div class="kpi-drawer-header">
-                      <h3>Channel Settings</h3>
-                      <button type="button" id="kpiSettingsClose" class="kpi-drawer-close">&times;</button>
-                    </div>
-                    <div class="kpi-drawer-body">
-                      <?php
-                      $globalChannels = KPI_DB::get_channels($user_id, false);
-                      $drawerPeriodChannels = KPI_DB::get_channels_for_period($user_id, $ym, false);
-                      ?>
-                      <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form" id="kpiSettingsForm">
-                        <?php wp_nonce_field('kpi_save_user_setup'); ?>
-                        <input type="hidden" name="action" value="kpi_save_user_setup">
-                        <!-- Populated by JS before submit: "" = global (null), "YYYY-MM" = period -->
-                        <input type="hidden" name="kpi_period" id="kpiDrawerPeriodInput" value="" data-ym="<?php echo esc_attr($ym); ?>">
-                        <input type="hidden" name="kpi_channels_json" id="kpi_channels_json_settings" value="">
-                        <!-- Per-editor JSON (no name = not submitted directly) -->
-                        <input type="hidden" id="kpi_channels_json_global" value="">
-                        <input type="hidden" id="kpi_channels_json_period" value="">
-
-                        <?php $cycle = self::get_year_cycle_settings($user_id); ?>
-                        <div class="kpi-cycle-box" style="margin:0 0 16px;">
-                          <p class="kpi-drawer-hint" style="margin:0 0 10px;">Year cycle:</p>
-
-                          <label class="kpi-drawer-check" style="margin-bottom:8px;">
-                            <input type="radio" name="kpi_year_mode" value="calendar" <?php checked($cycle['mode'], 'calendar'); ?>>
-                            <span>Calendar year (Jan–Dec)</span>
-                          </label>
-
-                          <label class="kpi-drawer-check">
-                            <input type="radio" name="kpi_year_mode" value="financial" <?php checked($cycle['mode'], 'financial'); ?>>
-                            <span>Financial year</span>
-                          </label>
-
-                          <div id="kpiFyStartWrap" style="margin-top:10px; <?php echo $cycle['mode'] === 'financial' ? '' : 'display:none;'; ?>">
-                            <div class="kpi-drawer-field">
-                              <label>Financial year start month</label>
-                              <select name="kpi_fy_start_month" id="kpiFyStartSelect" style="width:100%;height:44px;border-radius:12px;">
-                                <?php for ($m = 1; $m <= 12; $m++): ?>
-                                    <option value="<?php echo $m; ?>" <?php selected($cycle['fyStart'], $m); ?>>
-                                      <?php echo esc_html(date('F', mktime(0, 0, 0, $m, 1))); ?>
-                                    </option>
-                                <?php endfor; ?>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Channel set tabs -->
-                        <div class="kpi-dtabs" role="tablist">
-                          <button type="button" class="kpi-dtab is-active" data-view="global" role="tab"
-                            data-kpi-tip="Global channels are the default for all months">Global</button>
-                          <button type="button" class="kpi-dtab" data-view="period" role="tab"
-                            data-kpi-tip="Override channels for <?php echo esc_attr(date('F Y', strtotime($ym . '-01'))); ?> only">
-                            <?php echo esc_html(date('M Y', strtotime($ym . '-01'))); ?>
-                            <?php if ($periodHasOwnChannels): ?>
-                                <span class="kpi-dtab-badge">Custom</span>
-                            <?php endif; ?>
-                          </button>
-                        </div>
-
-                        <!-- Global panel -->
-                        <div class="kpi-drawer-panel" id="kpiDrawerPanel_global" role="tabpanel">
-                          <p class="kpi-drawer-hint">Default channels used across all months.</p>
-                          <div class="kpi-drawer-editor">
-                            <?php echo self::render_channel_editor($globalChannels, '_global'); ?>
-                          </div>
-                        </div>
-
-                        <!-- This Month panel -->
-                        <div class="kpi-drawer-panel" id="kpiDrawerPanel_period" role="tabpanel" style="display:none;">
-                          <p class="kpi-drawer-hint">
-                            Channels for <strong><?php echo esc_html(date('F Y', strtotime($ym . '-01'))); ?></strong>
-                            <?php if (!$periodHasOwnChannels): ?>
-                                <span class="kpi-drawer-hint-tag">(using global)</span>
-                            <?php endif; ?>
-                          </p>
-                          <div class="kpi-drawer-editor">
-                            <?php echo self::render_channel_editor($drawerPeriodChannels, '_period'); ?>
-                          </div>
-                        </div>
-
-                        <button type="submit" class="kpi-btn kpi-drawer-submit">Save Settings</button>
-                      </form>
-                    </div>
-                  </div>
-
                   <script type="application/json" id="kpi_leads_rows"><?php echo wp_json_encode($leadsRows); ?></script>
                   <script type="application/json" id="kpi_leads_prefill"><?php echo wp_json_encode($leadsPrefill); ?></script>
                   <script type="application/json" id="kpi_sales_rows"><?php echo wp_json_encode($salesRows); ?></script>
@@ -1118,6 +1027,97 @@ class KPI_Frontend
                     <script type="application/json" id="kpi_chart_data"><?php echo wp_json_encode($chartData); ?></script>
                   </div>
               <?php endif; ?>
+
+              <!-- Settings Drawer Overlay -->
+              <div id="kpiSettingsOverlay" class="kpi-drawer-overlay"></div>
+
+              <!-- Settings Drawer -->
+              <div id="kpiSettingsDrawer" class="kpi-drawer">
+                <div class="kpi-drawer-header">
+                  <h3>Channel Settings</h3>
+                  <button type="button" id="kpiSettingsClose" class="kpi-drawer-close">&times;</button>
+                </div>
+                <div class="kpi-drawer-body">
+                  <?php
+                  $globalChannels = KPI_DB::get_channels($user_id, false);
+                  $drawerPeriodChannels = KPI_DB::get_channels_for_period($user_id, $ym, false);
+                  ?>
+                  <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="kpi-drawer-form" id="kpiSettingsForm">
+                    <?php wp_nonce_field('kpi_save_user_setup'); ?>
+                    <input type="hidden" name="action" value="kpi_save_user_setup">
+                    <!-- Populated by JS before submit: "" = global (null), "YYYY-MM" = period -->
+                    <input type="hidden" name="kpi_period" id="kpiDrawerPeriodInput" value="" data-ym="<?php echo esc_attr($ym); ?>">
+                    <input type="hidden" name="kpi_channels_json" id="kpi_channels_json_settings" value="">
+                    <!-- Per-editor JSON (no name = not submitted directly) -->
+                    <input type="hidden" id="kpi_channels_json_global" value="">
+                    <input type="hidden" id="kpi_channels_json_period" value="">
+
+                    <?php $cycle = self::get_year_cycle_settings($user_id); ?>
+                    <div class="kpi-cycle-box" style="margin:0 0 16px;">
+                      <p class="kpi-drawer-hint" style="margin:0 0 10px;">Year cycle:</p>
+
+                      <label class="kpi-drawer-check" style="margin-bottom:8px;">
+                        <input type="radio" name="kpi_year_mode" value="calendar" <?php checked($cycle['mode'], 'calendar'); ?>>
+                        <span>Calendar year (Jan–Dec)</span>
+                      </label>
+
+                      <label class="kpi-drawer-check">
+                        <input type="radio" name="kpi_year_mode" value="financial" <?php checked($cycle['mode'], 'financial'); ?>>
+                        <span>Financial year</span>
+                      </label>
+
+                      <div id="kpiFyStartWrap" style="margin-top:10px; <?php echo $cycle['mode'] === 'financial' ? '' : 'display:none;'; ?>">
+                        <div class="kpi-drawer-field">
+                          <label>Financial year start month</label>
+                          <select name="kpi_fy_start_month" id="kpiFyStartSelect" style="width:100%;height:44px;border-radius:12px;">
+                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                <option value="<?php echo $m; ?>" <?php selected($cycle['fyStart'], $m); ?>>
+                                  <?php echo esc_html(date('F', mktime(0, 0, 0, $m, 1))); ?>
+                                </option>
+                            <?php endfor; ?>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Channel set tabs -->
+                    <div class="kpi-dtabs" role="tablist">
+                      <button type="button" class="kpi-dtab is-active" data-view="global" role="tab"
+                        data-kpi-tip="Global channels are the default for all months">Global</button>
+                      <button type="button" class="kpi-dtab" data-view="period" role="tab"
+                        data-kpi-tip="Override channels for <?php echo esc_attr(date('F Y', strtotime($ym . '-01'))); ?> only">
+                        <?php echo esc_html(date('M Y', strtotime($ym . '-01'))); ?>
+                        <?php if ($periodHasOwnChannels): ?>
+                            <span class="kpi-dtab-badge">Custom</span>
+                        <?php endif; ?>
+                      </button>
+                    </div>
+
+                    <!-- Global panel -->
+                    <div class="kpi-drawer-panel" id="kpiDrawerPanel_global" role="tabpanel">
+                      <p class="kpi-drawer-hint">Default channels used across all months.</p>
+                      <div class="kpi-drawer-editor">
+                        <?php echo self::render_channel_editor($globalChannels, '_global'); ?>
+                      </div>
+                    </div>
+
+                    <!-- This Month panel -->
+                    <div class="kpi-drawer-panel" id="kpiDrawerPanel_period" role="tabpanel" style="display:none;">
+                      <p class="kpi-drawer-hint">
+                        Channels for <strong><?php echo esc_html(date('F Y', strtotime($ym . '-01'))); ?></strong>
+                        <?php if (!$periodHasOwnChannels): ?>
+                            <span class="kpi-drawer-hint-tag">(using global)</span>
+                        <?php endif; ?>
+                      </p>
+                      <div class="kpi-drawer-editor">
+                        <?php echo self::render_channel_editor($drawerPeriodChannels, '_period'); ?>
+                      </div>
+                    </div>
+
+                    <button type="submit" class="kpi-btn kpi-drawer-submit">Save Settings</button>
+                  </form>
+                </div>
+              </div>
             </div>
           </div>
         <?php
