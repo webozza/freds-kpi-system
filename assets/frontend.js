@@ -569,7 +569,33 @@
 
     if (!toggleBtn || !drawer) return;
 
+    // Measure real top offset: bottom of all fixed/sticky elements above the fold
+    function measureTopOffset() {
+      var offset = 0;
+      var candidates = document.querySelectorAll(
+        "#wpadminbar, header, .site-header, [class*='site-header'], [class*='header-wrap'], [class*='navbar']"
+      );
+      for (var i = 0; i < candidates.length; i++) {
+        var el = candidates[i];
+        var pos = getComputedStyle(el).position;
+        if (pos !== "fixed" && pos !== "sticky") continue;
+        var rect = el.getBoundingClientRect();
+        if (rect.top < 10) { // at/near top of viewport
+          offset = Math.max(offset, rect.bottom);
+        }
+      }
+      return Math.round(offset);
+    }
+
+    function positionDrawer() {
+      var top = measureTopOffset();
+      var margin = 10;
+      drawer.style.top    = (top + margin) + "px";
+      drawer.style.height = "calc(100dvh - " + (top + margin * 2) + "px)";
+    }
+
     function openDrawer() {
+      positionDrawer();
       drawer.classList.add("is-open");
       if (overlay) overlay.classList.add("is-visible");
     }

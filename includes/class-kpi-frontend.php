@@ -1326,8 +1326,10 @@ class KPI_Frontend
                       </div>
                     </div>
 
-                    <button type="submit" class="kpi-btn kpi-drawer-submit">Save Settings</button>
                   </form>
+                </div>
+                <div class="kpi-drawer-footer">
+                  <button type="submit" form="kpiSettingsForm" class="kpi-btn kpi-drawer-submit">Save Settings</button>
                 </div>
               </div>
               <?php endif; // is_member / else — end settings drawer ?>
