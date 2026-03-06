@@ -52,8 +52,9 @@ class KPI_Teams {
 
     $limits = apply_filters('kpi_team_member_limits', [
       1 => 0,
-      2 => 5,
-      3 => 10,
+      2 => 0,
+      3 => 5,
+      4 => 10,
     ]);
 
     return (int)($limits[(int)$level->id] ?? 0);
