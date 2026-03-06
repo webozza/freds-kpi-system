@@ -1299,6 +1299,11 @@
    Settings Drawer
 ========================= */
 
+/* Drawer offset: site header (80px) + optional admin bar */
+:root {
+  --kpi-site-header: 80px;
+}
+
 .kpi-drawer-overlay {
   position: fixed;
   inset: 0;
@@ -1309,7 +1314,7 @@
   transition:
     opacity 0.3s ease,
     visibility 0.3s ease;
-  z-index: 99998;
+  z-index: 9998;
   pointer-events: none;
 }
 
@@ -1321,16 +1326,17 @@
 
 .kpi-drawer {
   position: fixed;
-  top: 0;
+  top: calc(var(--kpi-site-header) + 10px);
   right: 0;
   width: 100%;
   max-width: clamp(260px, 38vw, 380px);
-  height: 100dvh;
+  height: calc(100dvh - var(--kpi-site-header) - 20px);
   background: #132724;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: none;
   border-radius: 22px 0 0 22px;
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.4);
-  z-index: 99999;
+  z-index: 9999;
   transform: translateX(100%);
   opacity: 0;
   pointer-events: none;
@@ -1347,6 +1353,19 @@
   pointer-events: auto;
 }
 
+/* WP admin bar — 32px desktop, 46px mobile */
+body.admin-bar .kpi-drawer {
+  top: calc(32px + var(--kpi-site-header) + 10px);
+  height: calc(100dvh - 32px - var(--kpi-site-header) - 20px);
+}
+
+@media screen and (max-width: 782px) {
+  body.admin-bar .kpi-drawer {
+    top: calc(46px + var(--kpi-site-header) + 10px);
+    height: calc(100dvh - 46px - var(--kpi-site-header) - 20px);
+  }
+}
+
 @media (max-width: 720px) {
   .kpi-drawer {
     max-width: 100%;
@@ -1359,6 +1378,10 @@
   }
   .kpi-drawer.is-open {
     transform: translateY(0);
+  }
+  body.admin-bar .kpi-drawer {
+    top: auto;
+    height: 90dvh;
   }
 }
 
