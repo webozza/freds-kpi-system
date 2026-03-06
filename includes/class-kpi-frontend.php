@@ -74,6 +74,7 @@ class KPI_Frontend
       'ajaxUrl' => admin_url('admin-ajax.php'),
       'nonce' => wp_create_nonce('kpi_autosave'),
       'nonceCopy' => wp_create_nonce('kpi_copy_period_channels'),
+      'nonceTeam' => wp_create_nonce('kpi_team_action'),
       'currencySymbol' => '$',
       'moneyDecimals' => 2,
       'percentDecimals' => 2,
@@ -92,6 +93,16 @@ class KPI_Frontend
       return false;
     if (current_user_can('manage_options'))
       return true;
+
+    // Team members are granted access through their owner's membership
+    if (class_exists('KPI_Teams')) {
+      $uid  = get_current_user_id();
+      $user = get_user_by('id', $uid);
+      if ($user && in_array('kpi_team_member', (array)$user->roles)) {
+        $owner_id = KPI_Teams::get_owner_for_member($uid);
+        return $owner_id && KPI_Teams::get_member_limit($owner_id) > 0;
+      }
+    }
 
     // Paid Memberships Pro gate (if installed)
     if (function_exists('pmpro_hasMembershipLevel')) {
@@ -349,14 +360,15 @@ class KPI_Frontend
       return '<div class="kpi-wrap"><div class="kpi-shell"><div class="kpi-card kpi-card--glass"><h3>Subscription required</h3><p>Please subscribe to access the KPI system.</p><p><a class="kpi-btn" href="' . esc_url($levels_url) . '">View Plans</a></p></div></div></div>';
     }
 
-    $user_id = get_current_user_id();
+    $user_id        = get_current_user_id();
+    $is_team_member = class_exists('KPI_Teams') && KPI_Teams::is_team_member($user_id);
 
-    // Ensure defaults exist for this user (safe no-op if already seeded)
-    KPI_DB::ensure_default_channels($user_id);
-
-    // Show setup until user submits once
-    if (!self::setup_done($user_id)) {
-      return self::render_setup_form($user_id);
+    // Team members use their owner's channels — skip default seeding and setup
+    if (!$is_team_member) {
+      KPI_DB::ensure_default_channels($user_id);
+      if (!self::setup_done($user_id)) {
+        return self::render_setup_form($user_id);
+      }
     }
 
     return self::render_dashboard($user_id);
@@ -365,12 +377,97 @@ class KPI_Frontend
   // -----------------------
   // Dashboard (Activity + Monthly + Charts)
   // -----------------------
+  // -----------------------
+  // View context (team awareness)
+  // -----------------------
+  private static function get_view_context($user_id)
+  {
+    $user_id = (int)$user_id;
+    $default = [
+      'mode'       => 'own',
+      'is_owner'   => false,
+      'is_member'  => false,
+      'owner_id'   => $user_id,
+      'view_uid'   => $user_id,
+      'view_uids'  => [$user_id],
+      'channel_uid'=> $user_id,
+      'can_edit'   => true,
+      'member_ids' => [],
+      'all_uids'   => [$user_id],
+    ];
+
+    if (!class_exists('KPI_Teams')) return $default;
+
+    // Is this user a team member?
+    $owner_id = KPI_Teams::get_owner_for_member($user_id);
+    if ($owner_id) {
+      return array_merge($default, [
+        'is_member'   => true,
+        'owner_id'    => $owner_id,
+        'channel_uid' => $owner_id, // display owner's channels
+      ]);
+    }
+
+    // Is this user an owner with active members?
+    $member_ids = KPI_Teams::get_active_member_ids($user_id);
+    $all_uids   = array_merge([$user_id], $member_ids);
+    $has_team   = !empty($member_ids);
+    $limit      = KPI_Teams::get_member_limit($user_id);
+    $is_owner   = $has_team || $limit > 0;
+
+    $kpi_member = isset($_GET['kpi_member']) ? sanitize_text_field($_GET['kpi_member']) : '';
+
+    if ($has_team && $kpi_member === 'combined') {
+      return array_merge($default, [
+        'mode'       => 'combined',
+        'is_owner'   => true,
+        'view_uids'  => $all_uids,
+        'can_edit'   => false,
+        'member_ids' => $member_ids,
+        'all_uids'   => $all_uids,
+      ]);
+    }
+
+    if ($has_team && is_numeric($kpi_member) && (int)$kpi_member > 0) {
+      $mid = (int)$kpi_member;
+      if (in_array($mid, $member_ids)) {
+        return array_merge($default, [
+          'mode'        => 'member',
+          'is_owner'    => true,
+          'view_uid'    => $mid,
+          'view_uids'   => [$mid],
+          'channel_uid' => $user_id, // owner's channel config for display
+          'can_edit'    => false,    // read-only when viewing a member
+          'member_ids'  => $member_ids,
+          'all_uids'    => $all_uids,
+        ]);
+      }
+    }
+
+    // Owner viewing own data
+    return array_merge($default, [
+      'is_owner'   => $is_owner,
+      'member_ids' => $member_ids,
+      'all_uids'   => $all_uids,
+    ]);
+  }
+
   private static function render_dashboard($user_id)
   {
+    // View context (team awareness)
+    $ctx         = self::get_view_context($user_id);
+    $data_uid    = (int)$ctx['view_uid'];    // whose KPI data to load
+    $channel_uid = (int)$ctx['channel_uid']; // whose channels to display
+    $can_edit    = (bool)$ctx['can_edit'];
+    $kpi_member  = isset($_GET['kpi_member']) ? sanitize_text_field($_GET['kpi_member']) : '';
+
     // tab
     $tab = isset($_GET['kpi_tab']) ? sanitize_key($_GET['kpi_tab']) : 'activity';
-    if (!in_array($tab, ['activity', 'monthly', 'charts'], true))
+    if (!in_array($tab, ['activity', 'monthly', 'charts', 'team'], true))
       $tab = 'activity';
+
+    // Force to activity if member/combined view hits team tab
+    if ($tab === 'team' && !$ctx['is_owner']) $tab = 'activity';
 
     // ---- TAB-AWARE date selection ----
     if ($tab === 'monthly' || $tab === 'charts') {
@@ -404,13 +501,13 @@ class KPI_Frontend
     $yearSelectValue = $year;
 
     // ---- CHANNELS for Activity tab (per-period support) ----
-    $channels = KPI_DB::get_channels_for_period($user_id, $ym, true);
-    $periodHasOwnChannels = KPI_DB::period_has_own_channels($user_id, $ym);
+    $channels = KPI_DB::get_channels_for_period($channel_uid, $ym, true);
+    $periodHasOwnChannels = KPI_DB::period_has_own_channels($channel_uid, $ym);
 
-    // Period prompt info for JS (Issue 1)
+    // Period prompt info for JS (only for owner viewing own data)
     $periodInfo = null;
-    if ($tab === 'activity' && !$periodHasOwnChannels) {
-      $nearestPeriod = KPI_DB::get_nearest_period_with_channels($user_id, $ym);
+    if ($tab === 'activity' && !$periodHasOwnChannels && $ctx['mode'] === 'own' && !$ctx['is_member']) {
+      $nearestPeriod = KPI_DB::get_nearest_period_with_channels($channel_uid, $ym);
       $periodLabel = date('F Y', strtotime($ym . '-01'));
       $nearestLabel = $nearestPeriod ? date('F Y', strtotime($nearestPeriod . '-01')) : null;
       $periodInfo = [
@@ -428,12 +525,17 @@ class KPI_Frontend
       $channelIds[] = (int) $c['id'];
 
     // Pipeline daily + totals
-    $pipeByDate = KPI_DB::get_month_pipeline_rows($user_id, $year, $month);
-    $pipeTotals = KPI_DB::get_month_pipeline_totals($user_id, $year, $month);
-
-    // Leads daily + totals (per channel)
-    $leadsByDate = KPI_DB::get_month_leads_map($user_id, $year, $month);
-    $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel($user_id, $year, $month);
+    if ($ctx['mode'] === 'combined') {
+      $pipeByDate = KPI_DB::get_month_pipeline_rows_multi($ctx['view_uids'], $year, $month);
+      $pipeTotals = KPI_DB::get_month_pipeline_totals_multi($ctx['view_uids'], $year, $month);
+      $leadsByDate = KPI_DB::get_month_leads_map_multi($ctx['view_uids'], $year, $month);
+      $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel_multi($ctx['view_uids'], $year, $month);
+    } else {
+      $pipeByDate = KPI_DB::get_month_pipeline_rows($data_uid, $year, $month);
+      $pipeTotals = KPI_DB::get_month_pipeline_totals($data_uid, $year, $month);
+      $leadsByDate = KPI_DB::get_month_leads_map($data_uid, $year, $month);
+      $leadsTotalsByChannel = KPI_DB::get_month_leads_totals_by_channel($data_uid, $year, $month);
+    }
 
     // compute totals/stats
     $leadTotal = 0;
@@ -519,11 +621,17 @@ class KPI_Frontend
 
     if ($fyViewEnabled) {
       // Pull two calendar years because FY can span across years
-      $pipeA = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-      $pipeB = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear + 1);
-
-      $leadsA = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear);
-      $leadsB = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear + 1);
+      if ($ctx['mode'] === 'combined') {
+        $pipeA  = KPI_DB::get_year_pipeline_monthly_totals_multi($ctx['view_uids'], $monthlyBaseYear);
+        $pipeB  = KPI_DB::get_year_pipeline_monthly_totals_multi($ctx['view_uids'], $monthlyBaseYear + 1);
+        $leadsA = KPI_DB::get_year_leads_monthly_totals_by_name_multi($ctx['view_uids'], $monthlyBaseYear);
+        $leadsB = KPI_DB::get_year_leads_monthly_totals_by_name_multi($ctx['view_uids'], $monthlyBaseYear + 1);
+      } else {
+        $pipeA  = KPI_DB::get_year_pipeline_monthly_totals($data_uid, $monthlyBaseYear);
+        $pipeB  = KPI_DB::get_year_pipeline_monthly_totals($data_uid, $monthlyBaseYear + 1);
+        $leadsA = KPI_DB::get_year_leads_monthly_totals_by_name($data_uid, $monthlyBaseYear);
+        $leadsB = KPI_DB::get_year_leads_monthly_totals_by_name($data_uid, $monthlyBaseYear + 1);
+      }
 
       $monthlyPipeline = [];
       $monthlyLeads = [];
@@ -542,15 +650,26 @@ class KPI_Frontend
       }
 
       // Channel names from both years
-      $namesA = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear);
-      $namesB = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear + 1);
+      if ($ctx['mode'] === 'combined') {
+        $namesA = KPI_DB::get_channel_names_for_monthly_view_multi($ctx['view_uids'], $monthlyBaseYear);
+        $namesB = KPI_DB::get_channel_names_for_monthly_view_multi($ctx['view_uids'], $monthlyBaseYear + 1);
+      } else {
+        $namesA = KPI_DB::get_channel_names_for_monthly_view($data_uid, $monthlyBaseYear);
+        $namesB = KPI_DB::get_channel_names_for_monthly_view($data_uid, $monthlyBaseYear + 1);
+      }
       $monthlyChannelNames = array_values(array_unique(array_merge($namesA, $namesB)));
 
     } else {
       // Calendar year: Jan..Dec
-      $monthlyPipeline = KPI_DB::get_year_pipeline_monthly_totals($user_id, $monthlyBaseYear);
-      $monthlyLeads = KPI_DB::get_year_leads_monthly_totals_by_name($user_id, $monthlyBaseYear);
-      $monthlyChannelNames = KPI_DB::get_channel_names_for_monthly_view($user_id, $monthlyBaseYear);
+      if ($ctx['mode'] === 'combined') {
+        $monthlyPipeline     = KPI_DB::get_year_pipeline_monthly_totals_multi($ctx['view_uids'], $monthlyBaseYear);
+        $monthlyLeads        = KPI_DB::get_year_leads_monthly_totals_by_name_multi($ctx['view_uids'], $monthlyBaseYear);
+        $monthlyChannelNames = KPI_DB::get_channel_names_for_monthly_view_multi($ctx['view_uids'], $monthlyBaseYear);
+      } else {
+        $monthlyPipeline     = KPI_DB::get_year_pipeline_monthly_totals($data_uid, $monthlyBaseYear);
+        $monthlyLeads        = KPI_DB::get_year_leads_monthly_totals_by_name($data_uid, $monthlyBaseYear);
+        $monthlyChannelNames = KPI_DB::get_channel_names_for_monthly_view($data_uid, $monthlyBaseYear);
+      }
 
       $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       $ys = substr((string) $monthlyBaseYear, -2);
@@ -558,7 +677,7 @@ class KPI_Frontend
         $fyMonthLabels[] = $mn . '-' . $ys;
     }
 
-    $active = self::get_active_months_user($user_id, $monthlyBaseYear);
+    $active = self::get_active_months_user($data_uid, $monthlyBaseYear);
 
     // Build monthly grid rows (name-based, Issue 1+2)
     $monthlyGrid = [];
@@ -856,25 +975,72 @@ class KPI_Frontend
                     </script>
                   <?php endif; ?>
 
+                  <?php if ($ctx['is_owner'] && !empty($ctx['member_ids']) && $tab !== 'team'): ?>
+                    <div class="kpi-member-switcher">
+                      <label for="kpiMemberSwitch">Viewing:</label>
+                      <select id="kpiMemberSwitch" onchange="switchMemberView(this.value)">
+                        <option value="" <?php selected($kpi_member, ''); ?>>My Data</option>
+                        <option value="combined" <?php selected($kpi_member, 'combined'); ?>>Combined (Team)</option>
+                        <?php foreach ($ctx['member_ids'] as $mid):
+                          $mu = get_user_by('id', $mid);
+                          if (!$mu) continue;
+                          ?>
+                          <option value="<?php echo (int)$mid; ?>" <?php selected((string)$kpi_member, (string)$mid); ?>>
+                            <?php echo esc_html($mu->display_name ?: $mu->user_email); ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    <script>
+                      function switchMemberView(val) {
+                        var u = new URL(window.location.href);
+                        if (val) { u.searchParams.set('kpi_member', val); }
+                        else { u.searchParams.delete('kpi_member'); }
+                        window.location.href = u.toString();
+                      }
+                    </script>
+                  <?php endif; ?>
+
                   <div class="kpi-tabs">
-                    <a class="kpi-tab <?php echo $tab === 'activity' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'activity'])); ?>">Activity</a>
-                    <a class="kpi-tab <?php echo $tab === 'monthly' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'monthly'])); ?>">Monthly figures</a>
-                    <a class="kpi-tab <?php echo $tab === 'charts' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'charts'])); ?>">Charts</a>
+                    <a class="kpi-tab <?php echo $tab === 'activity' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'activity', 'kpi_member' => $kpi_member ?: null])); ?>">Activity</a>
+                    <a class="kpi-tab <?php echo $tab === 'monthly' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'monthly', 'kpi_member' => $kpi_member ?: null])); ?>">Monthly figures</a>
+                    <a class="kpi-tab <?php echo $tab === 'charts' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'charts', 'kpi_member' => $kpi_member ?: null])); ?>">Charts</a>
+                    <?php if ($ctx['is_owner']): ?>
+                      <a class="kpi-tab <?php echo $tab === 'team' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['kpi_tab' => 'team'])); ?>">Team</a>
+                    <?php endif; ?>
                   </div>
 
+                  <?php if (!$ctx['is_member']): ?>
                     <button type="button" id="kpiSettingsToggle" class="kpi-settings-btn" title="Settings">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                       </svg>
                     </button>
+                  <?php endif; ?>
                 </div>
               </div>
 
-              <?php if ($tab === 'activity'): ?>
+              <?php if ($ctx['is_member']): ?>
+                <div class="kpi-team-member-notice">
+                  <?php
+                  $owner_user = get_user_by('id', $ctx['owner_id']);
+                  $owner_name = $owner_user ? $owner_user->display_name : 'your team admin';
+                  ?>
+                  You're entering data as part of <strong><?php echo esc_html($owner_name); ?></strong>'s team.
+                </div>
+              <?php endif; ?>
+
+              <?php if ($tab === 'activity' && $can_edit): ?>
                   <div class="kpi-savebar">
                     <span id="kpiAutosaveStatus" class="kpi-autosave-status"></span>
                     <button class="kpi-btn kpi-btn--save kpi-btn--save-bar" type="submit" form="kpiActivityForm">Save Month</button>
+                  </div>
+              <?php elseif ($tab === 'activity' && !$can_edit): ?>
+                  <div class="kpi-savebar kpi-savebar--readonly">
+                    <span class="kpi-autosave-status">
+                      <?php echo $ctx['mode'] === 'combined' ? 'Combined view — read only' : 'Viewing member data — read only'; ?>
+                    </span>
                   </div>
               <?php endif; ?>
 
@@ -972,6 +1138,8 @@ class KPI_Frontend
                     'daysInMonth' => $daysInMonth,
                     'selectedLeadKeys' => array_map(function ($c) {
                     return 'lead_' . (int) $c['id']; }, $channels),
+                    'canEdit' => $can_edit,
+                    'viewMode' => $ctx['mode'],
                   ]); ?></script>
 
               <?php elseif ($tab === 'monthly'): ?>
@@ -1026,8 +1194,12 @@ class KPI_Frontend
 
                     <script type="application/json" id="kpi_chart_data"><?php echo wp_json_encode($chartData); ?></script>
                   </div>
+              <?php elseif ($tab === 'team' && $ctx['is_owner']): ?>
+                  <?php echo self::render_team_tab($user_id); ?>
+
               <?php endif; ?>
 
+              <?php if (!$ctx['is_member']): ?>
               <!-- Settings Drawer Overlay -->
               <div id="kpiSettingsOverlay" class="kpi-drawer-overlay"></div>
 
@@ -1118,10 +1290,98 @@ class KPI_Frontend
                   </form>
                 </div>
               </div>
+              <?php endif; // !$ctx['is_member'] — end settings drawer ?>
             </div>
           </div>
         <?php
         return ob_get_clean();
+  }
+
+  // -----------------------
+  // Team tab
+  // -----------------------
+  private static function render_team_tab($owner_id)
+  {
+    $limit        = class_exists('KPI_Teams') ? KPI_Teams::get_member_limit($owner_id) : 0;
+    $members      = class_exists('KPI_Teams') ? KPI_Teams::get_team_members($owner_id) : [];
+    $active_count = 0;
+    foreach ($members as $m) {
+      if ($m['status'] === 'active') $active_count++;
+    }
+    $pending_active_count = 0;
+    foreach ($members as $m) {
+      if (in_array($m['status'], ['active', 'pending'], true)) $pending_active_count++;
+    }
+
+    ob_start(); ?>
+        <div class="kpi-card kpi-card--glass">
+          <div class="kpi-hot-head">
+            <div>
+              <h3>Team Management</h3>
+              <p class="kpi-muted">Invite team members to track their own KPI data alongside yours.</p>
+            </div>
+          </div>
+
+          <?php if ($limit <= 0): ?>
+            <div class="kpi-team-upgrade">
+              <p>Your current plan does not include team members.</p>
+              <?php if (function_exists('pmpro_url')): ?>
+                <a class="kpi-btn" href="<?php echo esc_url(pmpro_url('levels')); ?>">Upgrade Plan</a>
+              <?php endif; ?>
+            </div>
+          <?php else: ?>
+
+            <!-- Usage bar -->
+            <div class="kpi-team-usage">
+              <div class="kpi-team-usage-label">
+                <span><?php echo esc_html($active_count); ?> of <?php echo esc_html($limit); ?> members active</span>
+              </div>
+              <div class="kpi-team-usage-bar">
+                <div class="kpi-team-usage-fill" style="width:<?php echo esc_attr(min(100, $limit > 0 ? round($active_count / $limit * 100) : 0)); ?>%"></div>
+              </div>
+            </div>
+
+            <!-- Invite form -->
+            <?php if ($pending_active_count < $limit): ?>
+            <div class="kpi-team-invite">
+              <h4>Invite a team member</h4>
+              <div class="kpi-team-invite-row">
+                <input type="email" id="kpiTeamInviteEmail" placeholder="colleague@example.com" class="kpi-team-email-input">
+                <button type="button" id="kpiTeamInviteBtn" class="kpi-btn">Send Invite</button>
+              </div>
+              <p id="kpiTeamInviteMsg" class="kpi-team-msg" style="display:none;"></p>
+            </div>
+            <?php else: ?>
+            <p class="kpi-muted" style="padding:8px 0;">
+              Team limit reached (<?php echo esc_html($limit); ?> members). Disable or remove a member to invite someone new.
+            </p>
+            <?php endif; ?>
+
+            <!-- Members list -->
+            <div class="kpi-team-list" id="kpiTeamList">
+              <?php if (!empty($members)): ?>
+              <h4>Current Members</h4>
+              <div class="kpi-team-table">
+                <div class="kpi-team-row kpi-team-row--head">
+                  <span>Email / Name</span>
+                  <span>Status</span>
+                  <span>Invited</span>
+                  <span>Actions</span>
+                </div>
+                <?php foreach ($members as $m):
+                  $mu = $m['member_id'] ? get_user_by('id', $m['member_id']) : null;
+                  echo KPI_Teams::render_member_row($m, $mu);
+                endforeach; ?>
+              </div>
+              <?php else: ?>
+              <p class="kpi-muted" style="padding:12px 0;">No team members yet. Invite someone above to get started.</p>
+              <?php endif; ?>
+            </div>
+
+          <?php endif; ?>
+        </div>
+    <?php
+    return ob_get_clean();
   }
 
   // -----------------------

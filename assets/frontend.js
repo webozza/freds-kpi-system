@@ -184,7 +184,9 @@
     prefill,
     daysInMonth,
     isLeadsTable,
+    canEdit,
   ) {
+    if (canEdit === undefined) canEdit = true;
     var container = document.getElementById(containerId);
     if (!container || !window.Handsontable) return null;
 
@@ -294,6 +296,11 @@
           return cp;
         }
 
+        // Read-only for combined / member views
+        if (!canEdit) {
+          cp.readOnly = true;
+        }
+
         var rMeta = rows[row] || {};
 
         if (rMeta.type === "money") {
@@ -311,6 +318,7 @@
 
       afterChange: function (changes, source) {
         if (!changes || source === "loadData" || source === "calc") return;
+        if (!canEdit) return;
 
         var touched = new Set();
         changes.forEach(function (c) {
@@ -395,6 +403,7 @@
     var salesPrefill = readJson("kpi_sales_prefill") || [];
     activityMeta = readJson("kpi_activity_meta") || {};
     var daysInMonth = activityMeta.daysInMonth || 30;
+    var canEdit = activityMeta.canEdit !== false;
 
     if (document.getElementById("kpiHotLeads")) {
       hotLeads = createActivityTable(
@@ -403,6 +412,7 @@
         leadsPrefill,
         daysInMonth,
         true,
+        canEdit,
       );
     }
 
@@ -413,6 +423,7 @@
         salesPrefill,
         daysInMonth,
         false,
+        canEdit,
       );
     }
 
@@ -1107,6 +1118,126 @@
     }
   }
 
+  // ---------- Team Management ----------
+  function initTeamManagement() {
+    var inviteBtn  = document.getElementById("kpiTeamInviteBtn");
+    var inviteEmail = document.getElementById("kpiTeamInviteEmail");
+    var inviteMsg  = document.getElementById("kpiTeamInviteMsg");
+    var teamList   = document.getElementById("kpiTeamList");
+
+    if (!inviteBtn && !teamList) return;
+
+    var nonceTeam = (kpiFront && kpiFront.nonceTeam) ? kpiFront.nonceTeam : "";
+
+    function showMsg(text, isError) {
+      if (!inviteMsg) return;
+      inviteMsg.textContent = text;
+      inviteMsg.className = "kpi-team-msg " + (isError ? "kpi-team-msg--error" : "kpi-team-msg--ok");
+      inviteMsg.style.display = "";
+      setTimeout(function () { inviteMsg.style.display = "none"; }, 5000);
+    }
+
+    // Invite
+    if (inviteBtn && inviteEmail) {
+      inviteBtn.addEventListener("click", function () {
+        var email = inviteEmail.value.trim();
+        if (!email) { showMsg("Please enter an email address.", true); return; }
+
+        inviteBtn.disabled = true;
+        inviteBtn.textContent = "Sending…";
+
+        $.post(kpiFront.ajaxUrl, {
+          action: "kpi_team_invite",
+          nonce: nonceTeam,
+          email: email,
+        }).done(function (res) {
+          if (res.success) {
+            showMsg(res.data.msg, false);
+            inviteEmail.value = "";
+            if (res.data.member_html && teamList) {
+              var table = teamList.querySelector(".kpi-team-table");
+              if (!table) {
+                teamList.innerHTML = "<h4>Current Members</h4><div class=\"kpi-team-table\"><div class=\"kpi-team-row kpi-team-row--head\"><span>Email / Name</span><span>Status</span><span>Invited</span><span>Actions</span></div></div>";
+                table = teamList.querySelector(".kpi-team-table");
+              }
+              var tmp = document.createElement("div");
+              tmp.innerHTML = res.data.member_html;
+              table.appendChild(tmp.firstElementChild);
+            }
+          } else {
+            showMsg(res.data ? res.data.msg : "An error occurred.", true);
+          }
+        }).fail(function () {
+          showMsg("Request failed. Please try again.", true);
+        }).always(function () {
+          inviteBtn.disabled = false;
+          inviteBtn.textContent = "Send Invite";
+        });
+      });
+
+      inviteEmail.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") inviteBtn.click();
+      });
+    }
+
+    // Delegate: disable / enable / remove
+    if (teamList) {
+      teamList.addEventListener("click", function (e) {
+        var btn = e.target.closest(".kpi-team-action");
+        if (!btn) return;
+
+        var memberId = parseInt(btn.getAttribute("data-member-id"), 10);
+        if (!memberId) return;
+
+        var action = "";
+        if (btn.classList.contains("kpi-team-action--disable")) action = "kpi_team_disable";
+        else if (btn.classList.contains("kpi-team-action--enable")) action = "kpi_team_enable";
+        else if (btn.classList.contains("kpi-team-action--remove")) action = "kpi_team_remove";
+        if (!action) return;
+
+        if (action === "kpi_team_remove") {
+          if (!confirm("Remove this team member? Their KPI data will be preserved.")) return;
+        }
+
+        btn.disabled = true;
+
+        $.post(kpiFront.ajaxUrl, {
+          action: action,
+          nonce: nonceTeam,
+          member_id: memberId,
+        }).done(function (res) {
+          if (res.success) {
+            if (action === "kpi_team_remove") {
+              var row = teamList.querySelector(".kpi-team-row[data-member-id='" + memberId + "']");
+              if (row) row.remove();
+            } else {
+              // Reload to update status badges and buttons
+              window.location.reload();
+            }
+          } else {
+            alert(res.data ? res.data.msg : "Action failed.");
+            btn.disabled = false;
+          }
+        }).fail(function () {
+          alert("Request failed. Please try again.");
+          btn.disabled = false;
+        });
+      });
+    }
+  }
+
+  // ---------- Read-only mode for combined/member views ----------
+  function applyReadOnlyMode() {
+    var meta = readJson("kpi_activity_meta");
+    if (!meta || meta.canEdit !== false) return;
+
+    // Disable autosave
+    autosaveTimer = null;
+    autosaveQueue = [];
+
+    // HOT instances will be set read-only via their config (canEdit passed to init)
+  }
+
   // ---------- init ----------
   $(function () {
     initHotActivity();
@@ -1118,5 +1249,7 @@
     initYearCycleToggle();
     initPeriodChannelPrompt();
     initCharts();
+    initTeamManagement();
+    applyReadOnlyMode();
   });
 })(jQuery);

@@ -628,6 +628,177 @@ class KPI_DB {
     return array_column($globals, 'name');
   }
 
+  // ----------- multi-user aggregate queries (team combined view) -----------
+
+  public static function get_month_pipeline_rows_multi($user_ids, $year, $month) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $ids  = implode(',', array_map('intval', $user_ids));
+    [$start, $end] = self::month_range($year, $month);
+
+    $sumCols = [];
+    foreach (self::pipeline_fields() as $f) $sumCols[] = "SUM($f) AS $f";
+
+    $sql  = "SELECT kpi_date, " . implode(', ', $sumCols);
+    $sql .= " FROM " . self::table_daily();
+    $sql .= " WHERE user_id IN ($ids) AND kpi_date >= %s AND kpi_date < %s";
+    $sql .= " GROUP BY kpi_date ORDER BY kpi_date ASC";
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, $start, $end), ARRAY_A);
+    $map  = [];
+    foreach ($rows as $r) $map[$r['kpi_date']] = $r;
+    return $map;
+  }
+
+  public static function get_month_pipeline_totals_multi($user_ids, $year, $month) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $ids  = implode(',', array_map('intval', $user_ids));
+    [$start, $end] = self::month_range($year, $month);
+
+    $sumCols = [];
+    foreach (self::pipeline_fields() as $f) $sumCols[] = "SUM($f) AS $f";
+
+    $sql = "SELECT " . implode(', ', $sumCols) . " FROM " . self::table_daily()
+         . " WHERE user_id IN ($ids) AND kpi_date >= %s AND kpi_date < %s";
+
+    $row = $wpdb->get_row($wpdb->prepare($sql, $start, $end), ARRAY_A);
+    return is_array($row) ? $row : [];
+  }
+
+  public static function get_month_leads_map_multi($user_ids, $year, $month) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $t    = self::table_leads_daily();
+    $ids  = implode(',', array_map('intval', $user_ids));
+    [$start, $end] = self::month_range($year, $month);
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT kpi_date, channel_id, SUM(value) AS value
+       FROM $t
+       WHERE user_id IN ($ids) AND kpi_date >= %s AND kpi_date < %s
+       GROUP BY kpi_date, channel_id",
+      $start, $end
+    ), ARRAY_A);
+
+    $map = [];
+    foreach ($rows as $r) {
+      $d   = $r['kpi_date'];
+      $cid = (int)$r['channel_id'];
+      if (!isset($map[$d])) $map[$d] = [];
+      $map[$d][$cid] = (int)$r['value'];
+    }
+    return $map;
+  }
+
+  public static function get_month_leads_totals_by_channel_multi($user_ids, $year, $month) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $t    = self::table_leads_daily();
+    $ids  = implode(',', array_map('intval', $user_ids));
+    [$start, $end] = self::month_range($year, $month);
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT channel_id, SUM(value) AS total
+       FROM $t
+       WHERE user_id IN ($ids) AND kpi_date >= %s AND kpi_date < %s
+       GROUP BY channel_id",
+      $start, $end
+    ), ARRAY_A);
+
+    $out = [];
+    foreach ($rows as $r) $out[(int)$r['channel_id']] = (int)$r['total'];
+    return $out;
+  }
+
+  public static function get_year_pipeline_monthly_totals_multi($user_ids, $year) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $ids  = implode(',', array_map('intval', $user_ids));
+    $year = (int)$year;
+
+    $sumCols = [];
+    foreach (self::pipeline_fields() as $f) $sumCols[] = "SUM($f) AS $f";
+
+    $sql = "SELECT MONTH(kpi_date) AS m, " . implode(', ', $sumCols)
+         . " FROM " . self::table_daily()
+         . " WHERE user_id IN ($ids) AND YEAR(kpi_date) = %d"
+         . " GROUP BY MONTH(kpi_date) ORDER BY MONTH(kpi_date) ASC";
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, $year), ARRAY_A);
+    $out  = [];
+    foreach ($rows as $r) {
+      $m = (int)$r['m'];
+      unset($r['m']);
+      $out[$m] = $r;
+    }
+    for ($m = 1; $m <= 12; $m++) {
+      if (!isset($out[$m])) $out[$m] = array_fill_keys(self::pipeline_fields(), 0);
+    }
+    return $out;
+  }
+
+  public static function get_year_leads_monthly_totals_by_name_multi($user_ids, $year) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $t_leads    = self::table_leads_daily();
+    $t_channels = self::table_channels();
+    $ids        = implode(',', array_map('intval', $user_ids));
+    $year       = (int)$year;
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT MONTH(ld.kpi_date) AS m, c.name AS channel_name, SUM(ld.value) AS total
+       FROM $t_leads ld
+       INNER JOIN $t_channels c ON ld.channel_id = c.id
+       WHERE ld.user_id IN ($ids) AND YEAR(ld.kpi_date) = %d
+       GROUP BY MONTH(ld.kpi_date), c.name
+       ORDER BY MONTH(ld.kpi_date) ASC",
+      $year
+    ), ARRAY_A);
+
+    $out = [];
+    for ($m = 1; $m <= 12; $m++) $out[$m] = [];
+    foreach ($rows as $r) {
+      $m    = (int)$r['m'];
+      $name = $r['channel_name'];
+      $out[$m][$name] = ($out[$m][$name] ?? 0) + (int)$r['total'];
+    }
+    return $out;
+  }
+
+  public static function get_channel_names_for_monthly_view_multi($user_ids, $year) {
+    global $wpdb;
+    if (empty($user_ids)) return [];
+
+    $t_leads    = self::table_leads_daily();
+    $t_channels = self::table_channels();
+    $ids        = implode(',', array_map('intval', $user_ids));
+    $year       = (int)$year;
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT c.name, MIN(c.sort_order) AS min_order
+       FROM $t_leads ld
+       INNER JOIN $t_channels c ON ld.channel_id = c.id
+       WHERE ld.user_id IN ($ids) AND YEAR(ld.kpi_date) = %d
+       GROUP BY c.name
+       ORDER BY min_order ASC, MIN(c.id) ASC",
+      $year
+    ), ARRAY_A);
+
+    if (!empty($rows)) return array_column($rows, 'name');
+
+    // Fallback: owner's global channels
+    $uid     = (int)$user_ids[0];
+    $globals = self::get_channels($uid, true);
+    return array_column($globals, 'name');
+  }
+
   // ----------- one-time migration from old fixed leads columns -----------
   private static function maybe_migrate_old_fixed_leads_once() {
     $flag = get_option('kpi_unlimited_channels_migrated_v1');
