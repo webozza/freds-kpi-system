@@ -738,9 +738,12 @@
 }
 
 #kpiHotLeads .htCore th:first-child,
-#kpiHotSales .htCore th:first-child,
-#kpiHotMonthly .htCore th:first-child {
+#kpiHotSales .htCore th:first-child {
   background-color: var(--hot-head) !important;
+}
+
+#kpiHotMonthly .htCore th:first-child {
+  background-color: #1a363a !important;
 }
 
 #kpiHotMonthly .htCore td:first-child {
@@ -1584,7 +1587,8 @@
 #kpiHotMonthly .htCore thead th {
   white-space: nowrap;
   font-size: 12px;
-  padding: 10px 8px !important;
+  padding: 4px 8px !important;
+  vertical-align: middle !important;
 }
 
 /* Adjust monthly hot head layout */
