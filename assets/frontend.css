@@ -2872,8 +2872,9 @@
   padding: 4px 10px;
   transition: background 0.15s, border-color 0.15s;
 }
-.kpi-team-action:focus{
-  background-color: unset !important;
+[type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
+    background-color: inherit !important;
+    color: inherit !important;
 }
 
 .kpi-team-action:hover {
