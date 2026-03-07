@@ -386,18 +386,18 @@
 
 .kpi-btn {
   appearance: none;
-  border: 0;
+  border: 0 !important;
   cursor: pointer;
 
   width: 100%;
-  min-height: 54px;
+  min-height: 40px !important;
   padding: 14px 18px;
 
   border-radius: 14px;
 
-  color: rgba(11, 18, 32, 0.96);
+  color: rgba(11, 18, 32, 0.96) !important;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 14px !important;
   letter-spacing: 0.4px;
   text-transform: uppercase;
 
@@ -742,12 +742,13 @@
   background-color: var(--hot-head) !important;
 }
 
-#kpiHotMonthly .htCore th:first-child {
+/* #kpiHotMonthly .htCore th:first-child {
   background-color: #1a363a !important;
-}
+} */
 
 #kpiHotMonthly .htCore td:first-child {
-  background-color: #1a363a !important;
+  background-color: #243e38 !important;
+  padding: 10px;
 }
 
 /* Optional: widen container on that page */
@@ -2575,11 +2576,11 @@
 
 #kpiHotMonthly td.htDimmed,
 #kpiHotMonthly th.htDimmed {
-  background-color: var(--hot-cell-bg) !important;
-  padding: 5px;
+  background-color: #173229 !important;
+  padding-top: 10px;
 }
 #kpiHotMonthly .htCore thead th {
-  background-color: var(--hot-cell-bg) !important;
+  background-color: #132724 !important;
 }
 /* #kpiHotMonthly .htCore thead th:hover {background-color: #81d3c7 !important;} */
 
@@ -2863,9 +2864,9 @@
 
 .kpi-team-action {
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.14) !important;
   border-radius: 6px;
-  color: var(--kpi-text);
+  color: var(--kpi-text) !important;
   cursor: pointer;
   font-size: 11px;
   padding: 4px 10px;
@@ -2873,13 +2874,13 @@
 }
 
 .kpi-team-action:hover {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.24) !important;
 }
 
 .kpi-team-action--disable:hover {
-  background: rgba(255, 180, 50, 0.12);
-  border-color: rgba(255, 180, 50, 0.3);
+  background: rgba(255, 180, 50, 0.12) !important;
+  border-color: rgba(255, 180, 50, 0.3) !important;
   color: #ffb432;
 }
 
