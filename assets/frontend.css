@@ -2566,7 +2566,7 @@
 #kpiHotSales.kpi-hot .htCore td.cell-bg-color {
   background-color: #243e38 !important;
   cursor: pointer;
-  padding: 10px;
+  padding: 12px;
 }
 
 #kpiHotLeads.kpi-hot .htCore tbody tr:hover td,
