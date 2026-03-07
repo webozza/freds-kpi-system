@@ -2869,7 +2869,7 @@
   color: var(--kpi-text) !important;
   cursor: pointer;
   font-size: 11px;
-  padding: 4px 10px;
+  padding: 4px 10px !important;
   transition: background 0.15s, border-color 0.15s;
 }
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
