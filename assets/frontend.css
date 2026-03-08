@@ -1982,8 +1982,12 @@
     background 0.15s ease;
 }
 
-.kpi-drawer-editor .kpi-channel-name{
+.kpi-drawer-editor .kpi-channel-editor .kpi-channel-row .kpi-channel-name{
   height: 36px !important;
+}
+.kpi-drawer-editor .kpi-channel-editor .kpi-channel-row .kpi-channel-remove{
+  height: 36px !important;
+  min-height: 36px !important;
 }
 
 .kpi-drawer{
@@ -2013,7 +2017,7 @@
 #kpiChannelEditor_global .kpi-channel-remove,
 #kpiChannelEditor_period .kpi-channel-remove {
   width: auto !important;
-  min-height: 40px !important;
+  min-height: 36px !important;
   height: 40px;
   padding: 0 14px !important;
   margin: 0 !important;
