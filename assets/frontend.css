@@ -2873,11 +2873,11 @@
 /* Action buttons in the team table */
 
 .kpi-team-actions{
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 20px;
-  text-align: center;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 20px !important;
+  text-align: center !important;
   border: 1px solid rgba(255,255,255,0.14) !important;
 }
 /* .kpi-team-actions {
