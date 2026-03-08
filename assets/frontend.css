@@ -1425,7 +1425,7 @@
 }
 
 .kpi-drawer-footer {
-  padding: 16px 30px 16px 20px;
+  padding: 16px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: #132724;
   flex-shrink: 0;
