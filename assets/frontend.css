@@ -2807,6 +2807,11 @@
   border-radius: 8px;
   font-size: 13px;
 }
+.kpi-team-row--head span:nth-child(2),
+.kpi-team-row--head span:nth-child(3),
+.kpi-team-row--head span:nth-child(4) {
+  text-align: center !important;
+}
 
 .kpi-team-row--head {
   background: rgba(255,255,255,0.04);
