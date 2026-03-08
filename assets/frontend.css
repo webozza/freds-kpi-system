@@ -2208,7 +2208,7 @@
 .kpi-fy-toggle-wrap {
   display: flex;
   align-items: center;
-  height: 44px;
+  
 }
 
 .kpi-fy-toggle {
@@ -2222,6 +2222,7 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.04);
   transition: all 0.15s ease;
+  height: 44px;
 }
 
 .kpi-fy-toggle:hover {
