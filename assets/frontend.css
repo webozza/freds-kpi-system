@@ -2891,7 +2891,6 @@
 .kpi-drawer-submit{
       margin: 0px auto !important;
     display: block !important;
-    transform: translateX(-5px);
 }
 
 .kpi-team-action:hover {
