@@ -2594,6 +2594,7 @@
 #kpiHotMonthly th.htDimmed {
   background-color: #14332a !important;
   padding-top: 10px;
+  height: 20px !important;
 }
 #kpiHotMonthly .htCore thead th {
   background-color: #132724 !important;
