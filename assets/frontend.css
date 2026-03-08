@@ -1544,6 +1544,9 @@
   border: none !important;
   color: #000 !important;
 }
+.kpi-drawer-submit:hover{
+  color: #000000 !important;
+}
 
 /* Mobile drawer full width */
 @media (max-width: 400px) {
@@ -2874,7 +2877,7 @@
 }
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
     background-color: inherit !important;
-    color: #000 !important;
+    color: #fff ;
 }
 
 .kpi-btn--ghost {
