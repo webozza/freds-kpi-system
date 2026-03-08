@@ -233,7 +233,9 @@ class KPI_Frontend
             <?php endforeach; ?>
           </div>
 
-          <button type="button" class="kpi-btn kpi-btn--ghost" id="kpiAddChannel<?php echo esc_attr($formIdSuffix); ?>">+ Add channel</button>
+         <button type="button" class="kpi-btn kpi-btn--ghost kpi-btn--ghost-remove" 
+  id="kpiAddChannel<?php echo esc_attr($formIdSuffix); ?>" 
+  style="display:none;">+ Add channel</button>
         <?php
         return ob_get_clean();
   }
@@ -1329,6 +1331,7 @@ class KPI_Frontend
                   </form>
                 </div>
                 <div class="kpi-drawer-footer">
+                  <button type="button" class="kpi-btn kpi-btn--ghost" id="kpiAddChannelFooter">+ Add channel</button>
                   <button type="submit" form="kpiSettingsForm" class="kpi-btn kpi-drawer-submit">Save Settings</button>
                 </div>
               </div>
@@ -1338,6 +1341,8 @@ class KPI_Frontend
         <?php
         return ob_get_clean();
   }
+
+
 
   // -----------------------
   // Team tab

@@ -1425,10 +1425,13 @@
 }
 
 .kpi-drawer-footer {
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: #132724;
-  flex-shrink: 0;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: #132724;
+    flex-shrink: 0;
+    justify-content: center;
+    display: flex;
+    gap: 10px;
 }
 
 .kpi-drawer-hint {
@@ -2201,6 +2204,7 @@
   }
 }
 
+
 /* ==========================================================
    ISSUE 2 — FY View Toggle (Monthly tab)
 ========================================================== */
@@ -2932,16 +2936,14 @@
 }
 
 .kpi-btn--ghost {
-    margin: 25px auto 0 auto !important;
-    display: block !important;
+    margin: 0 !important;
 }
 .kpi-btn--ghost:hover{
   color: #ffffff !important;
 }
 
 .kpi-drawer-submit{
-      margin: 0px auto !important;
-    display: block !important;
+      margin: 0px !important;
 }
 
 .kpi-team-action:hover {

@@ -731,6 +731,18 @@
       "kpiAddChannel_period",
       "kpi_channels_json_period",
     );
+
+    // ---- my custom ----
+var footerAddBtn = document.getElementById("kpiAddChannelFooter");
+if (footerAddBtn) {
+  footerAddBtn.addEventListener("click", function () {
+    var activeTab = document.querySelector(".kpi-dtab.is-active");
+    var view = activeTab ? activeTab.getAttribute("data-view") : "global";
+    var realBtnId = view === "period" ? "kpiAddChannel_period" : "kpiAddChannel_global";
+    var realBtn = document.getElementById(realBtnId);
+    if (realBtn) realBtn.click();
+  });
+}
   }
 
   function initYearCycleToggle() {
@@ -1324,3 +1336,5 @@
     applyReadOnlyMode();
   });
 })(jQuery);
+
+
