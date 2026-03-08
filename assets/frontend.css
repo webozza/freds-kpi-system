@@ -2894,8 +2894,9 @@
   color: var(--kpi-text) !important;
   cursor: pointer;
   font-size: 11px !important;
-  padding: 3px 8px !important;
+  padding: 4px 20px !important;
   transition: background 0.15s, border-color 0.15s;
+  font-weight: 700 !important;
 }
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
     background-color: inherit !important;
