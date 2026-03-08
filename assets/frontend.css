@@ -2874,7 +2874,20 @@
 }
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
     background-color: inherit !important;
-    color: inherit !important;
+    color: #000 !important;
+}
+
+.kpi-btn--ghost {
+    margin: 20px auto 0 auto !important;
+    display: block !important;
+}
+.kpi-btn--ghost:hover{
+  color: #ffffff !important;
+}
+
+.kpi-drawer-submit{
+      margin: 0px auto !important;
+    display: block !important;
 }
 
 .kpi-team-action:hover {
