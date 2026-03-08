@@ -2880,11 +2880,19 @@
   text-align: center !important;
   border: 1px solid rgba(255,255,255,0.14) !important;
 } */
-.kpi-team-actions {
+/* .kpi-team-actions {
   display: flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+} */
+ .kpi-team-actions {
+    display: flex;
+    gap: 0px !important;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin: 0 5px;
 }
 
 .kpi-team-action {
