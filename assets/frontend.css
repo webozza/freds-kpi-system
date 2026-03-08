@@ -1001,6 +1001,29 @@
 /* =========================================================
    HANDSONTABLE: MONTHLY - MATCH ACTIVITY TABLE STYLES
 ========================================================= */
+
+/* ======= my custom ======== */
+
+
+/* .wtSpreader {
+    width: 100% !important;
+}
+.wtHider {
+    height: 100% !important;
+    width: 100% !important;
+}
+.wtHolder {
+    width: 100% !important;
+}
+table.htCore {
+    width: 100% !important;
+} */
+
+#kpiSettingsDrawer{
+  top: 115px !important;
+  height: calc(-115px + 100dvh) !important;
+}
+
 /* Add premium shadow to Activity table container */
 
 /* Force solid base bg on master + clones */
