@@ -2890,11 +2890,11 @@
 .kpi-team-action {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.14) !important;
-  border-radius: 6px;
+  border-radius: 20px !important;
   color: var(--kpi-text) !important;
   cursor: pointer;
-  font-size: 11px;
-  padding: 4px 10px !important;
+  font-size: 11px !important;
+  padding: 3px 8px !important;
   transition: background 0.15s, border-color 0.15s;
 }
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
