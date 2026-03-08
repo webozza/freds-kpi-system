@@ -1627,7 +1627,7 @@
 #kpiHotMonthly .htCore thead th {
   white-space: nowrap;
   font-size: 12px;
-  padding: 4px 8px !important;
+  padding: 3px 8px !important;
   vertical-align: middle !important;
 }
 
@@ -2575,14 +2575,18 @@
 #kpiHotSales.kpi-hot .htCore tbody th {
   background-color: var(--hot-cell-bg) !important;
   color: #fff !important;
-  padding-top: 10px;
+  padding-top: 6px;
+}
+
+.wtHider {
+    height: 100% !important;
 }
 
 #kpiHotLeads.kpi-hot .htCore td.cell-bg-color,
 #kpiHotSales.kpi-hot .htCore td.cell-bg-color {
   background-color: #243e38 !important;
   cursor: pointer;
-  padding: 12px;
+  padding: 10px;
 }
 
 #kpiHotLeads.kpi-hot .htCore tbody tr:hover td,
@@ -2594,7 +2598,7 @@
 #kpiHotMonthly th.htDimmed {
   background-color: #14332a !important;
   padding-top: 10px;
-  height: 20px !important;
+  height: 36px !important;
 }
 #kpiHotMonthly .htCore thead th {
   background-color: #132724 !important;
@@ -2848,6 +2852,13 @@
   color: var(--kpi-muted);
   font-size: 12px;
   text-align: center !important;
+}
+
+/* All cells */
+.handsontable td,
+.handsontable th {
+  height: 36px !important;
+  line-height: 36px !important;
 }
 
 /* Status badges */
