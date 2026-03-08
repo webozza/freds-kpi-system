@@ -2872,15 +2872,15 @@
 
 /* Action buttons in the team table */
 
-.kpi-team-actions{
+/* .kpi-team-actions{
   font-size: 11px !important;
   font-weight: 700 !important;
   padding: 3px 8px !important;
   border-radius: 20px !important;
   text-align: center !important;
   border: 1px solid rgba(255,255,255,0.14) !important;
-}
-/* .kpi-team-actions {
+} */
+.kpi-team-actions {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -2896,7 +2896,7 @@
   font-size: 11px;
   padding: 4px 10px !important;
   transition: background 0.15s, border-color 0.15s;
-} */
+}
 [type=button]:focus, [type=button]:hover, [type=submit]:focus, [type=submit]:hover, button:focus, button:hover {
     background-color: inherit !important;
     color: #fff ;
