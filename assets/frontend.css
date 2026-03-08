@@ -2847,6 +2847,7 @@
 .kpi-team-date {
   color: var(--kpi-muted);
   font-size: 12px;
+  text-align: center !important;
 }
 
 /* Status badges */
