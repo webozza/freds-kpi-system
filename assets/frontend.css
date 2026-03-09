@@ -2544,6 +2544,7 @@ table.htCore {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .kpi-btn--danger {
@@ -2554,6 +2555,15 @@ table.htCore {
 
 .kpi-btn--danger:hover {
   background: #9b2c2c;
+}
+
+#kpiDeleteConfirmBtn{
+  background: radial-gradient(
+      900px 220px at 20% 0%,
+      rgba(255, 255, 255, 0.35),
+      transparent 54%
+    ),
+    linear-gradient(180deg, var(--kpi-accent), rgba(102, 240, 194, 0.82)) !important;
 }
 
 /* =========================================================
