@@ -726,16 +726,37 @@
 }
 
 /* Sticky first column (Day / Month label) */
-/* #kpiHotLeads .htCore th:first-child,
+#kpiHotLeads .htCore th:first-child,
 #kpiHotLeads .htCore td:first-child,
 #kpiHotSales .htCore th:first-child,
 #kpiHotSales .htCore td:first-child,
 #kpiHotMonthly .htCore th:first-child,
 #kpiHotMonthly .htCore td:first-child {
-  position: sticky !important;
+  /* position: sticky !important; */
   left: 0 !important;
   z-index: 1 !important;
+}
+/* Fix: prevent fixed column clone from overlapping site header */
+#kpiHotLeads .ht_clone_left,
+#kpiHotSales .ht_clone_left,
+#kpiHotMonthly .ht_clone_left {
+  z-index: 1 !important;
+}
+/* #kpiHotLeads.kpi-hot,
+#kpiHotSales.kpi-hot,
+#kpiHotMonthly.kpi-hot {
+  overflow: hidden;
+  position: relative;
 } */
+/* Fix: keep top-left corner header below site nav */
+#kpiHotLeads .ht_clone_top_left_corner,
+#kpiHotSales .ht_clone_top_left_corner,
+#kpiHotMonthly .ht_clone_top_left_corner,
+#kpiHotLeads .ht_clone_top,
+#kpiHotSales .ht_clone_top,
+#kpiHotMonthly .ht_clone_top {
+  z-index: 1 !important;
+}
 
 #kpiHotLeads .htCore th:first-child,
 #kpiHotSales .htCore th:first-child {
