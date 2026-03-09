@@ -1041,8 +1041,8 @@ table.htCore {
 } */
 
 #kpiSettingsDrawer{
-  top: 115px !important;
-  height: calc(-115px + 100dvh) !important;
+  top: 150px !important;
+  height: calc(-150px + 100dvh) !important;
 }
 
 /* Add premium shadow to Activity table container */
