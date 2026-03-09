@@ -497,7 +497,7 @@ class KPI_Frontend
       }
     }
 
-    $minYear = 2026;
+    $minYear = 2025;
     $year = max($minYear, min(2100, $year));
     $month = max(1, min(12, $month));
 
@@ -874,8 +874,10 @@ class KPI_Frontend
                         <label for="kpiYearSelectActivity">Year</label>
                         <select id="kpiYearSelectActivity" onchange="updateActivityUrl()">
                           <?php
+                          // $currentYear = (int) date('Y');
+                          // $startYear = max($minYear, $currentYear);
                           $currentYear = (int) date('Y');
-                          $startYear = max($minYear, $currentYear);
+                          $startYear = $minYear;
                           for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                               <option value="<?php echo $y; ?>" <?php selected($yearSelectValue, $y); ?>><?php echo $y; ?></option>
                           <?php endfor; ?>
