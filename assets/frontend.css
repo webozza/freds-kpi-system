@@ -726,7 +726,7 @@
 }
 
 /* Sticky first column (Day / Month label) */
-#kpiHotLeads .htCore th:first-child,
+/* #kpiHotLeads .htCore th:first-child,
 #kpiHotLeads .htCore td:first-child,
 #kpiHotSales .htCore th:first-child,
 #kpiHotSales .htCore td:first-child,
@@ -735,7 +735,7 @@
   position: sticky !important;
   left: 0 !important;
   z-index: 1 !important;
-}
+} */
 
 #kpiHotLeads .htCore th:first-child,
 #kpiHotSales .htCore th:first-child {

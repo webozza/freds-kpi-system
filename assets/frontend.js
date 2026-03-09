@@ -267,6 +267,7 @@
       manualColumnResize: true,
       manualRowResize: true,
       width:"100%",
+      fixedColumnsStart: 1,
       contextMenu: true,
       outsideClickDeselects: false,
       columnSorting: false,
@@ -552,6 +553,7 @@
       readOnly: true,
       licenseKey: "non-commercial-and-evaluation",
       manualColumnResize: true,
+      fixedColumnsStart: 1,
       cells: function (row, col) {
         var cp = { readOnly: true };
         cp.renderer = col === 0 ? metricRenderer : cellRenderer;
