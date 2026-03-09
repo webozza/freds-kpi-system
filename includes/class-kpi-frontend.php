@@ -929,7 +929,7 @@ class KPI_Frontend
                       <select id="kpiYearSelectMonthly" onchange="updateMonthlyYearUrl()">
                         <?php
                         $currentYear = (int) date('Y');
-                        $startYear = max($minYear, $currentYear);
+                        $startYear = $minYear;
                         for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                               <option value="<?php echo $y; ?>" <?php selected($monthlyBaseYear, $y); ?>><?php echo $y; ?></option>
                         <?php endfor; ?>
@@ -976,7 +976,7 @@ class KPI_Frontend
                       <select id="kpiYearSelectCharts" onchange="updateChartsYearUrl()">
                         <?php
                         $currentYear = (int) date('Y');
-                        $startYear = max($minYear, $currentYear);
+                        $startYear = $minYear;
                         for ($y = $startYear; $y <= $startYear + 10; $y++): ?>
                               <option value="<?php echo $y; ?>" <?php selected($monthlyBaseYear, $y); ?>><?php echo $y; ?></option>
                         <?php endfor; ?>
