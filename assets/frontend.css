@@ -1276,7 +1276,7 @@ table.htCore {
 }
 /* Controls the actual column width - targets the <col class="rowHeader"> element */
 .handsontable .htCore col.rowHeader {
-  width: 180px !important;
+  width: 210px !important;
 }
 
 /* Only for text wrapping in the first column cells - no width here */
