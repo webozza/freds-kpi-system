@@ -3053,7 +3053,7 @@ table.htCore {
     align-items: center;
     flex-wrap: wrap;
     justify-content: space-between;
-    margin: 0 5px !important;
+    margin: 0;
 }
 
 .kpi-team-action {
