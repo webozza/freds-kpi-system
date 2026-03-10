@@ -7,7 +7,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('KPI_CALC_VERSION', '1.8.8');
+define('KPI_CALC_VERSION', '1.8.9');
 define('KPI_CALC_PATH', plugin_dir_path(__FILE__));
 define('KPI_CALC_URL', plugin_dir_url(__FILE__));
 
