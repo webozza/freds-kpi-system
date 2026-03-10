@@ -1325,6 +1325,17 @@ table.htCore {
   overflow: hidden !important;
 }
 
+/* ====== team member table ======= */
+
+.kpi-team-row--head span {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+}
+.kpi-team-actions {
+    margin: 0 !important;
+}
+
     .kpi-tabs {
     flex-wrap: wrap !important;
 
