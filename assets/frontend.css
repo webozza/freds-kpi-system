@@ -1274,13 +1274,17 @@ table.htCore {
     gap: 10px;
     display: flex;
 }
+/* Controls the actual column width - targets the <col class="rowHeader"> element */
+.handsontable .htCore col.rowHeader {
+  width: 180px !important;
+}
+
+/* Only for text wrapping in the first column cells - no width here */
 .handsontable .htCore td:first-child,
 .handsontable .htCore th:first-child {
-  width: 80px !important;
-  min-width: 80px !important;
-  max-width: 80px !important;
-  white-space: normal !important;  /* allows text to wrap */
+  white-space: normal !important;
   word-break: break-word !important;
+  overflow: hidden !important;
 }
 
     .kpi-tabs {
@@ -1307,6 +1311,10 @@ table.htCore {
   button#kpiSettingsToggle {
     width: 48%;
     border-radius: 100px;
+}
+#kpiSettingsDrawer {
+    top: 85px !important;
+    height: calc(-85px + 100dvh) !important;
 }
 }
 
@@ -1625,7 +1633,7 @@ table.htCore {
 @media (max-width: 400px) {
   .kpi-drawer {
     max-width: 100%;
-    right: -100%;
+    right: 0;
   }
 }
 
