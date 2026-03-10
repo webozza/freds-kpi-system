@@ -29,7 +29,7 @@
 #kpiHotSales .wtHolder,
 #kpiHotMonthly .wtHolder #kpiHotSales,
 .wtHolder {
-  cursor: pointer;
+  cursor: pointer !important;
   border-radius: 0px !important;
 }
 
@@ -1254,10 +1254,11 @@ table.htCore {
 }
 
 @media (max-width: 980px) {
-  .kpi-controls {
+.kpi-controls {
     flex-wrap: wrap;
     justify-content: flex-start;
-  }
+    width: 100%;
+}
 
   .kpi-tabs {
     width: 100%;
@@ -1265,10 +1266,21 @@ table.htCore {
 }
 
 @media (max-width: 640px) {
-  .kpi-control-group {
-    flex-direction: column;
+.kpi-control-group {
+    flex-direction: row;
     width: 100%;
     gap: 10px;
+    display: flex;
+}
+
+    .kpi-tabs {
+    flex-wrap: wrap !important;
+
+  }
+  .kpi-tab{
+        width: 48% !important;
+    display: flex !important;
+    justify-content: center !important;
   }
 
   .kpi-select-control {
@@ -1282,6 +1294,10 @@ table.htCore {
   #kpiMonthSelectActivity {
     min-width: 100%;
   }
+  button#kpiSettingsToggle {
+    width: 48%;
+    border-radius: 100px;
+}
 }
 
 /* =========================
