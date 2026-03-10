@@ -1262,7 +1262,9 @@ table.htCore {
 
   .kpi-tabs {
     width: 100%;
+    justify-content: space-between;
   }
+  
 }
 
 @media (max-width: 640px) {
@@ -1271,6 +1273,14 @@ table.htCore {
     width: 100%;
     gap: 10px;
     display: flex;
+}
+.handsontable .htCore td:first-child,
+.handsontable .htCore th:first-child {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  white-space: normal !important;  /* allows text to wrap */
+  word-break: break-word !important;
 }
 
     .kpi-tabs {
