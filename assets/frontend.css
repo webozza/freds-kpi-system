@@ -1274,7 +1274,7 @@ table.htCore {
     gap: 10px;
     display: flex;
 }
-/* Controls the actual column width - targets the <col class="rowHeader"> element */
+/* for monthly table */
 .handsontable .htCore col.rowHeader {
   width: 210px !important;
 }
@@ -1282,6 +1282,44 @@ table.htCore {
 /* Only for text wrapping in the first column cells - no width here */
 .handsontable .htCore td:first-child,
 .handsontable .htCore th:first-child {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: hidden !important;
+}
+
+/* For activity first table  */
+#kpiHotLeads .htCore col.rowHeader {
+  width: 160px !important;
+}
+
+/* Force the sticky left clone panel to match */
+#kpiHotLeads.handsontable ~ .ht_clone_inline_start,
+#kpiHotLeads.handsontable ~ .ht_clone_top_inline_start_corner {
+  width: 160px !important;
+}
+
+/* Allow text to wrap inside the first column cells */
+#kpiHotLeads .htCore td:first-child,
+#kpiHotLeads .htCore th:first-child {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: hidden !important;
+}
+
+/* For activity second table */
+#kpiHotSales .htCore col.rowHeader {
+  width: 160px !important;
+}
+
+/* Force the sticky left clone panel to match */
+#kpiHotSales.handsontable ~ .ht_clone_inline_start,
+#kpiHotSales.handsontable ~ .ht_clone_top_inline_start_corner {
+  width: 160px !important;
+}
+
+/* Allow text to wrap inside the first column cells */
+#kpiHotSales .htCore td:first-child,
+#kpiHotSales .htCore th:first-child {
   white-space: normal !important;
   word-break: break-word !important;
   overflow: hidden !important;
