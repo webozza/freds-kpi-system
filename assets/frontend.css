@@ -33,22 +33,25 @@
   border-radius: 0px !important;
 }
 
-/* Firefox */
-/* #kpiHotLeads .wtHolder,
+@media(min-width:681px){
+
+  /* Firefox */
+#kpiHotLeads .wtHolder,
 #kpiHotSales .wtHolder,
 #kpiHotMonthly .wtHolder {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.08);
-} */
+}
 
 /* Chrome / Edge / Safari */
-/* #kpiHotLeads .wtHolder::-webkit-scrollbar,
+#kpiHotLeads .wtHolder::-webkit-scrollbar,
 #kpiHotSales .wtHolder::-webkit-scrollbar,
 #kpiHotMonthly .wtHolder::-webkit-scrollbar {
   width: 10px;
   height: 10px;
   cursor: pointer;
-} */
+}
+}
 
 
 
