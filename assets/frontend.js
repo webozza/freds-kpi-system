@@ -77,7 +77,15 @@
 
   var isSyncing = false;                                                                                                                                                                                                                                                                              
                                                                                                                                                                                                                                                                                                       
-  mirror.addEventListener('scroll', function () {                                                                                                                                                                                                                                                   
+  // Sync mirror position just before user starts using it                                                                                                                                                                                                                                            
+  mirror.addEventListener('touchstart', function () {                                                                                                                                                                                                                                               
+    var masterMaxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;                                                                                                                                                                                                                        
+    var mirrorMaxScroll = mirror.scrollWidth - mirror.clientWidth;                                                                                                                                                                                                                                    
+    var ratio = masterMaxScroll > 0 ? masterHolder.scrollLeft / masterMaxScroll : 0;
+    mirror.scrollLeft = ratio * mirrorMaxScroll;
+  }, { passive: true });
+
+  mirror.addEventListener('scroll', function () {
     if (isSyncing) return;
     isSyncing = true;
     setTimeout(function () { isSyncing = false; }, 0);
@@ -91,13 +99,6 @@
   });
 
   masterHolder.addEventListener('scroll', function () {
-    if (isSyncing) return;
-    isSyncing = true;
-    setTimeout(function () { isSyncing = false; }, 300);
-    var mirrorMaxScroll = mirror.scrollWidth - mirror.clientWidth;
-    var masterMaxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;
-    var ratio = masterMaxScroll > 0 ? masterHolder.scrollLeft / masterMaxScroll : 0;
-    mirror.scrollLeft = ratio * mirrorMaxScroll;
     updateThumb();
   });
 }
