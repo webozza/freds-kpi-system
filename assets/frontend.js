@@ -93,7 +93,7 @@
   masterHolder.addEventListener('scroll', function () {
     if (isSyncing) return;
     isSyncing = true;
-    setTimeout(function () { isSyncing = false; }, 0);
+    setTimeout(function () { isSyncing = false; }, 300);
     var mirrorMaxScroll = mirror.scrollWidth - mirror.clientWidth;
     var masterMaxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;
     var ratio = masterMaxScroll > 0 ? masterHolder.scrollLeft / masterMaxScroll : 0;
