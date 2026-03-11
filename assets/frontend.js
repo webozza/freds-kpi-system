@@ -51,6 +51,57 @@
   var autosaveTimer = null;
   var showDeleteModal = null;
 
+  // custom
+
+  function initMirrorScrollbar(containerId) {
+    var masterHolder = document.querySelector('#' + containerId + ' .ht_master .wtHolder');
+    var mirror = document.querySelector('.kpi-mirror-scroll[data-target="' + containerId + '"]');
+    if (!masterHolder || !mirror) return;
+
+    var inner = mirror.querySelector('.kpi-mirror-scroll-inner');
+    var thumb = mirror.parentElement.querySelector('.kpi-mirror-thumb');
+
+    inner.style.width = masterHolder.scrollWidth + 'px';
+
+    function updateThumb() {
+      var ratio = mirror.clientWidth / masterHolder.scrollWidth;
+      var thumbWidth = Math.max(mirror.clientWidth * ratio, 40);
+      var maxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;
+      var scrollRatio = maxScroll > 0 ? masterHolder.scrollLeft / maxScroll : 0;
+      var maxLeft = mirror.clientWidth - thumbWidth;
+      thumb.style.width = thumbWidth + 'px';
+      thumb.style.left = (scrollRatio * maxLeft) + 'px'; // no scrollLeft offset needed
+    }
+
+    updateThumb();
+
+  var isSyncing = false;                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                      
+  mirror.addEventListener('scroll', function () {                                                                                                                                                                                                                                                   
+    if (isSyncing) return;
+    isSyncing = true;
+    setTimeout(function () { isSyncing = false; }, 0);
+    var mirrorMaxScroll = mirror.scrollWidth - mirror.clientWidth;
+    var masterMaxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;
+    var ratio = mirrorMaxScroll > 0 ? mirror.scrollLeft / mirrorMaxScroll : 0;
+    masterHolder.scrollLeft = ratio * masterMaxScroll;
+    var cloneTop = document.querySelector('#' + containerId + ' .ht_clone_top .wtHolder');
+    if (cloneTop) cloneTop.scrollLeft = ratio * masterMaxScroll;
+    updateThumb();
+  });
+
+  masterHolder.addEventListener('scroll', function () {
+    if (isSyncing) return;
+    isSyncing = true;
+    setTimeout(function () { isSyncing = false; }, 0);
+    var mirrorMaxScroll = mirror.scrollWidth - mirror.clientWidth;
+    var masterMaxScroll = masterHolder.scrollWidth - masterHolder.clientWidth;
+    var ratio = masterMaxScroll > 0 ? masterHolder.scrollLeft / masterMaxScroll : 0;
+    mirror.scrollLeft = ratio * mirrorMaxScroll;
+    updateThumb();
+  });
+}
+
   // ---------- autosave (debounced patch) ----------
   function queueAutosaveChange(date, key, value) {
     autosaveQueue.push({ date: date, key: key, value: value });
@@ -415,6 +466,7 @@
         true,
         canEdit,
       );
+      initMirrorScrollbar('kpiHotLeads');
     }
 
     if (document.getElementById("kpiHotSales")) {
@@ -426,6 +478,7 @@
         false,
         canEdit,
       );
+      initMirrorScrollbar('kpiHotSales');
     }
 
     recalcAllCards();
@@ -560,6 +613,7 @@
         return cp;
       },
     });
+    initMirrorScrollbar('kpiHotMonthly');
   }
 
   // ---------- Settings Drawer ----------

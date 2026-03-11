@@ -1071,6 +1071,13 @@ class KPI_Frontend
                         </div>
                       </div>
                       <div id="kpiHotLeads" class="kpi-hot"></div>
+                                            <!-- custom -->
+                        <div class="kpi-mirror-wrap">
+                          <div class="kpi-mirror-scroll" data-target="kpiHotLeads">
+                            <div class="kpi-mirror-scroll-inner"></div>
+                          </div>
+                          <div class="kpi-mirror-thumb"></div>
+                        </div>
                     </div>
 
                     <!-- Sales Statistics Table -->
@@ -1081,6 +1088,14 @@ class KPI_Frontend
                         </div>
                       </div>
                       <div id="kpiHotSales" class="kpi-hot"></div>
+                      <!-- custom -->
+                      <div class="kpi-mirror-wrap">
+                        <div class="kpi-mirror-scroll" data-target="kpiHotSales">
+                          <div class="kpi-mirror-scroll-inner"></div>
+                        </div>
+                        <div class="kpi-mirror-thumb"></div>
+                      </div>
+                      
                     </div>
                   </form>
 
@@ -1158,6 +1173,13 @@ class KPI_Frontend
                     </div>
 
                     <div id="kpiHotMonthly" class="kpi-hot kpi-hot--monthly"></div>
+                                          <!-- custom -->
+                      <div class="kpi-mirror-wrap">
+                        <div class="kpi-mirror-scroll" data-target="kpiHotMonthly">
+                          <div class="kpi-mirror-scroll-inner"></div>
+                        </div>
+                        <div class="kpi-mirror-thumb"></div>
+                      </div>
 
                     <script type="application/json" id="kpi_monthly_grid"><?php echo wp_json_encode($monthlyGrid); ?></script>
                     <script type="application/json" id="kpi_monthly_meta"><?php echo wp_json_encode([

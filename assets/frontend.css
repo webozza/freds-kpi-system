@@ -34,21 +34,32 @@
 }
 
 /* Firefox */
-#kpiHotLeads .wtHolder,
+/* #kpiHotLeads .wtHolder,
 #kpiHotSales .wtHolder,
 #kpiHotMonthly .wtHolder {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.08);
-}
+} */
 
 /* Chrome / Edge / Safari */
-#kpiHotLeads .wtHolder::-webkit-scrollbar,
+/* #kpiHotLeads .wtHolder::-webkit-scrollbar,
 #kpiHotSales .wtHolder::-webkit-scrollbar,
 #kpiHotMonthly .wtHolder::-webkit-scrollbar {
   width: 10px;
   height: 10px;
   cursor: pointer;
+} */
+
+
+
+
+.topSelectionHandle.topLeftSelectionHandle {
+    display: none !important;
 }
+.bottomSelectionHandle.bottomRightSelectionHandle {
+    display: none !important;
+}
+
 
 #kpiHotLeads .wtHolder::-webkit-scrollbar-track,
 #kpiHotSales .wtHolder::-webkit-scrollbar-track,
@@ -1365,6 +1376,68 @@ table.htCore {
     top: 85px !important;
     height: calc(-85px + 100dvh) !important;
 }
+
+/* custom */
+
+  /* Hide native scrollbar — we replace it with a div */
+  .kpi-mirror-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .wtHolder::-webkit-scrollbar {
+    display: none;
+  }
+/* .kpi-mirror-scroll {
+    scrollbar-width: none;
+    position: relative;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    height: 20px;
+    width: 100%;
+    background-color: #324A43;
+    border-radius: 100px;
+    margin-top: 3px;
+}
+  .kpi-mirror-scroll-inner {
+    height: 1px;
+  }
+
+.kpi-mirror-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 19px;
+    background: #ffffff36;
+    border-radius: 999px;
+    pointer-events: none;
+} */
+   .kpi-mirror-wrap {
+    position: relative;
+    height: 20px;
+    width: 100%;
+  }
+  .kpi-mirror-scroll {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow-x: scroll;
+    overflow-y: hidden;
+        background-color: #324A43;
+    border-radius: 100px;
+    margin-top: 3px;
+  }
+  .kpi-mirror-scroll-inner {
+    height: 1px;
+  }
+  .kpi-mirror-thumb {
+    position: absolute;
+    bottom: 0;
+    height: 17px;
+    background: #ffffff36;
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+
+
 }
 
 /* =========================
